@@ -1,0 +1,3 @@
+__version__ = "0.1.0rc1"
+CONTRACT_SCHEMA_VERSION = "0.1.0"
+RULE_PACK_SCHEMA_VERSION = "0.1.0"

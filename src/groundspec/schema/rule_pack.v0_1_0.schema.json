@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:groundspec:schema:rule-pack:0.1.0",
+  "title": "Rule Pack",
+  "description": "A declarative, non-executable bundle of rules for one layer (core, risk_overlay, domain, project). See docs/rule-pack-authoring.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["rule_pack_schema_version", "pack_id", "version", "layer", "title", "rules"],
+  "properties": {
+    "rule_pack_schema_version": { "const": "0.1.0" },
+    "pack_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{1,63}$" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "layer": {
+      "enum": ["core", "risk_overlay", "domain", "project"],
+      "description": "Precedence layer. Fixed at 4 layers; task_preference is not a rule-pack layer (see docs/architecture.md)."
+    },
+    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "description": { "type": "string", "maxLength": 2000, "default": "" },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string", "maxLength": 1000, "default": "" },
+        "license": { "type": "string", "maxLength": 200, "default": "" },
+        "maintainer": { "type": "string", "maxLength": 200, "default": "" }
+      },
+      "default": {}
+    },
+    "imports": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/pack_reference" },
+      "default": [],
+      "maxItems": 20,
+      "description": "Other packs this one depends on. Import depth is bounded by the loader (default max depth 4) and cycles are rejected."
+    },
+    "rules": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/rule" },
+      "minItems": 0,
+      "maxItems": 500
+    }
+  },
+  "$defs": {
+    "pack_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pack_id", "version"],
+      "properties": {
+        "pack_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{1,63}$" },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "version", "title", "purpose", "scope", "applies_when",
+        "severity", "requirement", "verification_method", "evidence_requirement",
+        "failure_behavior", "source_or_rationale"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]{1,63}$",
+          "description": "Stable within this pack. Uniqueness across a loaded rule set is enforced by the loader."
+        },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "purpose": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "scope": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "applies_when": { "$ref": "#/$defs/condition" },
+        "severity": {
+          "enum": ["hard_constraint", "soft_objective", "advisory"],
+          "description": "hard_constraint: single violation blocks completion. soft_objective: feeds the weighted rubric. advisory: surfaced but never gates or scores."
+        },
+        "requirement": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "verification_method": {
+          "enum": [
+            "automated_test", "manual_inspection", "user_confirmation",
+            "external_reference_check", "reproducible_command", "static_analysis", "other"
+          ]
+        },
+        "evidence_requirement": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "failure_behavior": {
+          "enum": ["block_completion", "downgrade_score", "warn_only", "require_escalation"]
+        },
+        "source_or_rationale": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "conflict_key": {
+          "type": "string",
+          "maxLength": 200,
+          "default": "",
+          "description": "Rules sharing a non-empty conflict_key with a different requirement are flagged as a precedence conflict rather than silently merged."
+        },
+        "review_date": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+          "default": ""
+        },
+        "status": {
+          "enum": ["active", "deprecated"],
+          "default": "active"
+        },
+        "replaced_by": { "type": "string", "maxLength": 200, "default": "" }
+      }
+    },
+    "condition": {
+      "description": "Constrained, non-executable boolean expression evaluated against a Task Contract. true/false are literals; all other forms reference contract fields by dotted path.",
+      "oneOf": [
+        { "type": "boolean" },
+        { "$ref": "#/$defs/leaf_condition" },
+        { "$ref": "#/$defs/all_condition" },
+        { "$ref": "#/$defs/any_condition" },
+        { "$ref": "#/$defs/not_condition" }
+      ]
+    },
+    "leaf_condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "op"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "op": {
+          "enum": ["exists", "not_exists", "eq", "neq", "in", "not_in", "contains", "gte", "lte", "gt", "lt"]
+        },
+        "value": {}
+      }
+    },
+    "all_condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["all"],
+      "properties": {
+        "all": { "type": "array", "items": { "$ref": "#/$defs/condition" }, "minItems": 1, "maxItems": 50 }
+      }
+    },
+    "any_condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["any"],
+      "properties": {
+        "any": { "type": "array", "items": { "$ref": "#/$defs/condition" }, "minItems": 1, "maxItems": 50 }
+      }
+    },
+    "not_condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["not"],
+      "properties": {
+        "not": { "$ref": "#/$defs/condition" }
+      }
+    }
+  }
+}
