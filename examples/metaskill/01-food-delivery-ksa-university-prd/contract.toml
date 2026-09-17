@@ -1,4 +1,4 @@
-contract_schema_version = "0.2.0"
+contract_schema_version = "0.3.0"
 task_id = "food-delivery-ksa-university-prd"
 [[acceptance.criteria]]
 description = "PRD names target users, the core order-to-delivery journey, and MVP scope boundaries"
@@ -59,13 +59,14 @@ version = "0.1.0"
 constraints = []
 non_goals = ["Actually building or shipping the app", "Nationwide launch scope -- this PRD is for a single-city pilot", "Verified real-world market sizing (this is a planning contract, not a completed research report)"]
 [[scope.assumptions]]
-confidence = "medium"
+confidence = "high"
 safe_default = true
-statement = "A single-city pilot (one or two campuses in Riyadh or Jeddah) is the right starting scope, not all of Saudi Arabia at once."
-[[scope.assumptions]]
-confidence = "medium"
-safe_default = true
-statement = "Campus-adjacent restaurants are logistically simpler for a pilot than delivering from across the city."
+statement = "Within whatever pilot scope is chosen, campus-adjacent restaurants are logistically simpler to start with than delivering from across the city."
+[[scope.open_questions]]
+classification = "high_value"
+default_applied = "Assumed a single-city, one-or-two-campus pilot as the minimal, lowest-risk starting scope -- deferred under the clarification-question budget rather than asked, and recorded here rather than folded into scope.assumptions."
+question = "Geographic/market scope for the pilot: one campus, one city (e.g. Riyadh or Jeddah), or a national launch? This is a checklist item for any product-scoping PRD per the Meta-Skill's clarification policy, not a detail to silently default."
+resolution_status = "defaulted"
 [[scope.open_questions]]
 classification = "high_value"
 question = "What's the actual payment mix among target students (card/mada, STC Pay-style wallets, or cash on delivery)? This changes checkout design and unit economics."

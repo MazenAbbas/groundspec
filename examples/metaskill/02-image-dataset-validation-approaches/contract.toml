@@ -1,4 +1,4 @@
-contract_schema_version = "0.2.0"
+contract_schema_version = "0.3.0"
 task_id = "image-dataset-validation-approaches"
 [[acceptance.criteria]]
 description = "Exactly three local-first approaches are compared on the same criteria"

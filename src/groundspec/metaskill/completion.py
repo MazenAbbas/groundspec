@@ -125,6 +125,25 @@ def residual_risk_blocks_completion(residual_risks: list[dict[str, object]]) -> 
     )
 
 
+def has_deferred_high_value_open_questions(open_questions: list[dict[str, object]]) -> bool:
+    """True if any open question is classified 'high_value' and was not
+    actually answered by the user -- whether it was given a disclosed
+    default (resolution_status 'defaulted') or left fully open with no
+    default attempted at all ('open'; note a 'high_value' item left
+    'open' does not reach BLOCKED, since only 'blocking' does -- this is
+    what keeps it from being silently dropped instead).
+
+    A disclosed default under budget pressure is the *documented*,
+    correct behavior (see clarification-policy.md) -- but it still means
+    the deliverable rests on an unconfirmed, materially outcome-changing
+    judgment call, which is exactly what downgrades an otherwise-clean
+    result to PASS_WITH_CAVEATS instead of a plain PASS."""
+    return any(
+        q.get("classification") == "high_value" and q.get("resolution_status") != "answered"
+        for q in open_questions
+    )
+
+
 def derive_completion_state(
     *,
     hard_constraints_passed: bool,
@@ -133,6 +152,7 @@ def derive_completion_state(
     acceptance_criteria_met: bool | None,
     authorization_boundary_violated: bool = False,
     unresolved_critical_risk_to_validity: bool = False,
+    has_deferred_high_value_items: bool = False,
 ) -> CompletionState:
     """Pure function: identical inputs always produce the identical state.
 
@@ -159,7 +179,14 @@ def derive_completion_state(
       7. Every 'must' criterion met, no violation, no blocking risk: PASS,
          or PASS_WITH_CAVEATS if the budget ran out along the way (budget
          pressure always downgrades a PASS, because time pressure is a
-         standing reason to distrust unexplored edge cases).
+         standing reason to distrust unexplored edge cases) *or* if any
+         high-value clarification item was deferred/defaulted rather than
+         actually confirmed by the user (see has_deferred_high_value_items):
+         a disclosed, responsible default is not a defect, but a deliverable
+         resting on several unconfirmed material judgment calls is not a
+         plain, unqualified PASS either -- two independent live runs of
+         this exact policy reached PASS with six such defaults apiece
+         before this gate existed, which is the reason it does now.
     """
     if has_unresolved_blocking_questions:
         return "BLOCKED"
@@ -173,4 +200,6 @@ def derive_completion_state(
         return "FAIL"
     if unresolved_critical_risk_to_validity:
         return "FAIL"
-    return "PASS_WITH_CAVEATS" if budget_expired else "PASS"
+    if budget_expired or has_deferred_high_value_items:
+        return "PASS_WITH_CAVEATS"
+    return "PASS"

@@ -3,6 +3,7 @@ import pytest
 from groundspec.metaskill.completion import (
     derive_completion_state,
     evaluate_acceptance_criteria,
+    has_deferred_high_value_open_questions,
     residual_risk_blocks_completion,
 )
 
@@ -261,3 +262,72 @@ def test_unmet_criterion_with_weak_label_is_reported_as_unmet_not_inadequate():
     assert result.must_criteria_met is False
     assert result.unmet_must_ids == ["c1"]
     assert result.inadequate_evidence_ids == []
+
+
+# --- Regression hardening: deferred high-value items caveat PASS (two independent
+#     forward tests of v0.2.0rc2 both reached plain PASS with 6 such defaults) ---
+
+
+def test_has_deferred_high_value_open_questions_true_for_defaulted():
+    questions = [{"classification": "high_value", "resolution_status": "defaulted"}]
+    assert has_deferred_high_value_open_questions(questions) is True
+
+
+def test_has_deferred_high_value_open_questions_true_for_left_open():
+    # An unanswered high_value item that wasn't even given a default is at
+    # least as concerning as one that was -- both must trigger this.
+    questions = [{"classification": "high_value", "resolution_status": "open"}]
+    assert has_deferred_high_value_open_questions(questions) is True
+
+
+def test_has_deferred_high_value_open_questions_false_when_actually_answered():
+    questions = [{"classification": "high_value", "resolution_status": "answered"}]
+    assert has_deferred_high_value_open_questions(questions) is False
+
+
+def test_has_deferred_high_value_open_questions_false_for_other_classifications():
+    questions = [
+        {"classification": "important_defaultable", "resolution_status": "defaulted"},
+        {"classification": "blocking", "resolution_status": "open"},
+    ]
+    assert has_deferred_high_value_open_questions(questions) is False
+
+
+def test_has_deferred_high_value_open_questions_false_when_empty():
+    assert has_deferred_high_value_open_questions([]) is False
+
+
+def test_deferred_high_value_items_downgrade_pass_to_pass_with_caveats():
+    state = derive_completion_state(
+        hard_constraints_passed=True,
+        has_unresolved_blocking_questions=False,
+        budget_expired=False,
+        acceptance_criteria_met=True,
+        has_deferred_high_value_items=True,
+    )
+    assert state == "PASS_WITH_CAVEATS"
+
+
+def test_no_deferred_high_value_items_allows_plain_pass():
+    state = derive_completion_state(
+        hard_constraints_passed=True,
+        has_unresolved_blocking_questions=False,
+        budget_expired=False,
+        acceptance_criteria_met=True,
+        has_deferred_high_value_items=False,
+    )
+    assert state == "PASS"
+
+
+def test_deferred_high_value_items_do_not_escalate_past_fail():
+    # A real defect (auth violation) still reports as FAIL, not softened
+    # to PASS_WITH_CAVEATS just because a caveat condition also applies.
+    state = derive_completion_state(
+        hard_constraints_passed=True,
+        has_unresolved_blocking_questions=False,
+        budget_expired=False,
+        acceptance_criteria_met=True,
+        authorization_boundary_violated=True,
+        has_deferred_high_value_items=True,
+    )
+    assert state == "FAIL"

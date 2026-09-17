@@ -1,4 +1,4 @@
-contract_schema_version = "0.2.0"
+contract_schema_version = "0.3.0"
 task_id = "audit-linkedin-launch-post"
 [[acceptance.criteria]]
 description = "Every measurable/factual claim in the post is listed individually"

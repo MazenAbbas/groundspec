@@ -49,11 +49,16 @@ def test_01_food_delivery_selects_multiple_domain_packs_and_has_ranked_risk_ques
     domain_ids = {p["pack_id"] for p in contract["routing"]["domain_packs"]}
     assert domain_ids == {"software", "research"}
     assumptions = contract["scope"]["assumptions"]
-    assert len(assumptions) >= 2
+    assert len(assumptions) >= 1
     for a in assumptions:
         assert a["confidence"] in ("low", "medium", "high")
+        assert a["safe_default"] is True  # schema 0.3.0: safe_default is const true
     high_value = [q for q in contract["scope"]["open_questions"] if q["classification"] == "high_value"]
-    assert len(high_value) >= 2
+    assert len(high_value) >= 3
+    # Regression: geographic/market scope must be a recorded high_value
+    # question, never a silently-defaulted assumption (see clarification-
+    # policy.md's checklist and CHANGELOG.md's [0.2.0rc2] entry).
+    assert any("scope" in q["question"].lower() or "campus" in q["question"].lower() for q in high_value)
     must_criteria = [c for c in contract["acceptance"]["criteria"] if c["priority"] == "must"]
     assert len(must_criteria) >= 3
 

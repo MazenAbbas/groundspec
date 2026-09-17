@@ -68,21 +68,34 @@ def example_01_food_delivery_prd() -> tuple[dict, str]:
         "Nationwide launch scope -- this PRD is for a single-city pilot",
         "Verified real-world market sizing (this is a planning contract, not a completed research report)",
     ]
+    # Geographic/market scope is on the clarification-policy checklist of
+    # near-universally-material PRD decisions -- it may not be silently
+    # defaulted as a plain assumption (that was itself an earlier version
+    # of this exact example, corrected after a forward test caught the
+    # inconsistency; see CHANGELOG.md's [0.2.0rc2] entry). "Campus-adjacent
+    # restaurants" is a genuinely minor logistics detail *within* whatever
+    # scope is chosen, not a scope decision itself, so it stays an
+    # assumption -- at "high" confidence, since it doesn't actually depend
+    # on the still-open scope question.
     _sec(c, "scope")["assumptions"] = [
         {
-            "statement": "A single-city pilot (one or two campuses in Riyadh or Jeddah) is the right "
-            "starting scope, not all of Saudi Arabia at once.",
-            "confidence": "medium",
-            "safe_default": True,
-        },
-        {
-            "statement": "Campus-adjacent restaurants are logistically simpler for a pilot than "
-            "delivering from across the city.",
-            "confidence": "medium",
+            "statement": "Within whatever pilot scope is chosen, campus-adjacent restaurants are "
+            "logistically simpler to start with than delivering from across the city.",
+            "confidence": "high",
             "safe_default": True,
         },
     ]
     _sec(c, "scope")["open_questions"] = [
+        {
+            "question": "Geographic/market scope for the pilot: one campus, one city (e.g. Riyadh or "
+            "Jeddah), or a national launch? This is a checklist item for any product-scoping PRD "
+            "per the Meta-Skill's clarification policy, not a detail to silently default.",
+            "classification": "high_value",
+            "resolution_status": "defaulted",
+            "default_applied": "Assumed a single-city, one-or-two-campus pilot as the minimal, "
+            "lowest-risk starting scope -- deferred under the clarification-question budget rather "
+            "than asked, and recorded here rather than folded into scope.assumptions.",
+        },
         {
             "question": "What's the actual payment mix among target students (card/mada, STC Pay-style "
             "wallets, or cash on delivery)? This changes checkout design and unit economics.",
@@ -132,7 +145,12 @@ def example_01_food_delivery_prd() -> tuple[dict, str]:
         "assumptions/questions above are the objectively correct ones for a real Saudi food-delivery "
         "venture; they illustrate the *shape* of high-value-question selection and risk-ranking this "
         "Skill is meant to produce. A real invocation would need actual current research to fill in "
-        "`status.verified_facts` before the PRD's market claims could be trusted.\n"
+        "`status.verified_facts` before the PRD's market claims could be trusted.\n\n"
+        "**Corrected in v0.2.0rc2:** an independent forward test caught this example silently "
+        "defaulting geographic/market scope as a plain assumption, contradicting the clarification "
+        "policy's own checklist (which lists that dimension as near-universally material). It is now "
+        "recorded as a deferred `high_value` open question instead -- see CHANGELOG.md's "
+        "[0.2.0rc2] entry.\n"
     )
     return c, session_notes
 

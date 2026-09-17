@@ -16,6 +16,7 @@ from groundspec.contract.validator import validate_contract_dict
 from groundspec.metaskill.completion import (
     derive_completion_state,
     evaluate_acceptance_criteria,
+    has_deferred_high_value_open_questions,
     residual_risk_blocks_completion,
 )
 
@@ -134,6 +135,9 @@ def _run_pipeline(contract: dict, evidence: dict) -> str:
         unresolved_critical_risk_to_validity=residual_risk_blocks_completion(
             contract["status"]["residual_risks"]
         ),
+        has_deferred_high_value_items=has_deferred_high_value_open_questions(
+            contract["scope"]["open_questions"]
+        ),
     )
 
 
@@ -145,11 +149,16 @@ def test_defective_evidence_can_never_produce_pass():
     assert state == "FAIL"  # the authorization violation alone forces this
 
 
-def test_corrected_evidence_against_corrected_contract_can_pass():
+def test_corrected_evidence_against_corrected_contract_yields_pass_with_caveats():
+    # Not a plain PASS: the corrected fixture deliberately still has
+    # deferred high-value items (persona/payments/language/monetization),
+    # exactly the situation that must be caveated, not hidden -- two
+    # independent forward tests of this exact policy reached a bare PASS
+    # with six such defaults before this gate existed.
     contract = _load("contract_corrected.toml")
     evidence = _evidence("evidence_corrected.json")
     state = _run_pipeline(contract, evidence)
-    assert state in ("PASS", "PASS_WITH_CAVEATS")
+    assert state == "PASS_WITH_CAVEATS"
 
 
 def test_critical_risk_gate_actually_engages_when_not_explicitly_excused():
