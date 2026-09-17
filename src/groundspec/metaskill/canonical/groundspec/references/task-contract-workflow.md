@@ -66,7 +66,7 @@ For each `acceptance.criteria` entry, record a literal true/false result (did th
 groundspec evaluate <slug>.toml <result-dir>/
 ```
 
-where `<result-dir>/evidence.json` contains `hard_constraint_results`, `dimension_scores`, and `acceptance_criteria_results` (see `execution-and-verification.md`). Report exactly one of `PASS` / `PASS_WITH_CAVEATS` / `FAIL` / `INCOMPLETE` / `BLOCKED` -- never a bespoke phrase, and never `PASS` without every 'must' criterion having an actual recorded result.
+where `<result-dir>/evidence.json` contains `hard_constraint_results`, `dimension_scores`, `acceptance_criteria_results` (ideally the rich `{met, evidence_label}` shape, not just a bare bool -- a weak label on a criterion that demanded real evidence is caught here, not silently passed), and `authorization_violations` (empty list if none). See `execution-and-verification.md` for the full shape and the evidence-label taxonomy. Report exactly one of `PASS` / `PASS_WITH_CAVEATS` / `FAIL` / `INCOMPLETE` / `BLOCKED` -- never a bespoke phrase, and never `PASS` without every 'must' criterion having an actual, adequately-evidenced recorded result.
 
 ## 10. Bounded revision
 
