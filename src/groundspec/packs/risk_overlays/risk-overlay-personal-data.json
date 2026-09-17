@@ -1,0 +1,40 @@
+{
+  "rule_pack_schema_version": "0.1.0",
+  "pack_id": "risk-overlay-personal-data",
+  "version": "0.1.0",
+  "layer": "risk_overlay",
+  "title": "Risk overlay: personal-data handling",
+  "description": "Tasks that read, combine, or produce data about an identifiable person.",
+  "provenance": { "source": "groundspec built-in", "license": "MIT" },
+  "imports": [],
+  "rules": [
+    {
+      "id": "minimum-necessary-personal-data",
+      "version": "0.1.0",
+      "title": "Collect and retain only what the task needs",
+      "purpose": "Limit exposure from handling personal data at all.",
+      "scope": "Tasks tagged personal_data.",
+      "applies_when": { "path": "routing.risk_overlays", "op": "contains", "value": "personal_data" },
+      "severity": "hard_constraint",
+      "requirement": "No personal data beyond what brief.expected_deliverables actually requires is collected, compiled across sources, or retained in artifacts.",
+      "verification_method": "manual_inspection",
+      "evidence_requirement": "A review of inputs/outputs shows no extraneous personal data.",
+      "failure_behavior": "block_completion",
+      "source_or_rationale": "PRD Phase 14: 'Do not compile personal information across sources.'"
+    },
+    {
+      "id": "redact-in-diagnostics",
+      "version": "0.1.0",
+      "title": "Redact personal data in logs and diagnostics",
+      "purpose": "Prevent incidental leakage through error messages or debug output.",
+      "scope": "Tasks tagged personal_data.",
+      "applies_when": { "path": "routing.risk_overlays", "op": "contains", "value": "personal_data" },
+      "severity": "hard_constraint",
+      "requirement": "Error messages and diagnostic output must not print full personal data values; redact or truncate them.",
+      "verification_method": "manual_inspection",
+      "evidence_requirement": "Sampled diagnostic output shows redaction in place.",
+      "failure_behavior": "block_completion",
+      "source_or_rationale": "PRD Phase 14: 'Support redacted diagnostics where appropriate.'"
+    }
+  ]
+}

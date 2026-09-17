@@ -1,0 +1,54 @@
+{
+  "rule_pack_schema_version": "0.1.0",
+  "pack_id": "risk-overlay-high-stakes-regulated",
+  "version": "0.1.0",
+  "layer": "risk_overlay",
+  "title": "Risk overlay: medical, legal, financial, or safety-regulated work",
+  "description": "High-stakes domains where this framework structures the task but never substitutes for a qualified professional. See PRD Phase 12.",
+  "provenance": { "source": "groundspec built-in", "license": "MIT" },
+  "imports": [],
+  "rules": [
+    {
+      "id": "no-professional-authority-implied",
+      "version": "0.1.0",
+      "title": "Never imply the output replaces professional review",
+      "purpose": "Prevent a structured, confident-looking contract from being mistaken for licensed advice.",
+      "scope": "Tasks tagged high_stakes_regulated.",
+      "applies_when": { "path": "routing.risk_overlays", "op": "contains", "value": "high_stakes_regulated" },
+      "severity": "hard_constraint",
+      "requirement": "The deliverable must state plainly that it is informational, not professional medical/legal/financial advice, and must name the expert review step still required before anyone acts on it.",
+      "verification_method": "manual_inspection",
+      "evidence_requirement": "The disclosure and escalation step are present in the deliverable itself, not only in surrounding chat.",
+      "failure_behavior": "block_completion",
+      "source_or_rationale": "PRD Phase 12: 'Never claim that a generic domain pack replaces a qualified professional.'"
+    },
+    {
+      "id": "current-authoritative-sources-with-jurisdiction-and-date",
+      "version": "0.1.0",
+      "title": "Sources must be current, authoritative, and dated",
+      "purpose": "Prevent stale or jurisdiction-mismatched guidance from being presented as current.",
+      "scope": "Tasks tagged high_stakes_regulated.",
+      "applies_when": { "path": "routing.risk_overlays", "op": "contains", "value": "high_stakes_regulated" },
+      "severity": "hard_constraint",
+      "requirement": "Every factual claim cites a source with its jurisdiction (where applicable) and access date; no fabricated citation is permitted.",
+      "verification_method": "manual_inspection",
+      "evidence_requirement": "status.verified_facts entries include source and date for high-stakes claims.",
+      "failure_behavior": "block_completion",
+      "source_or_rationale": "PRD Phase 12: 'Require current authoritative sources... Record jurisdiction and date... Prohibit fabricated citations.'"
+    },
+    {
+      "id": "no-automatic-external-action",
+      "version": "0.1.0",
+      "title": "No automatic external action in high-stakes domains",
+      "purpose": "Keep a human decision-maker in the loop for consequential actions.",
+      "scope": "Tasks tagged high_stakes_regulated.",
+      "applies_when": { "path": "routing.risk_overlays", "op": "contains", "value": "high_stakes_regulated" },
+      "severity": "hard_constraint",
+      "requirement": "No filing, submission, purchase, or other external action may be taken automatically; the task stops at a recommendation with a named escalation condition.",
+      "verification_method": "manual_inspection",
+      "evidence_requirement": "control.escalation_conditions names the required human/professional review step.",
+      "failure_behavior": "require_escalation",
+      "source_or_rationale": "PRD Phase 12: 'Prevent automatic external action by default... Provide escalation conditions.'"
+    }
+  ]
+}

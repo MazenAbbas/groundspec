@@ -1,0 +1,40 @@
+{
+  "rule_pack_schema_version": "0.1.0",
+  "pack_id": "risk-overlay-destructive-irreversible",
+  "version": "0.1.0",
+  "layer": "risk_overlay",
+  "title": "Risk overlay: destructive or irreversible operations",
+  "description": "Operations that destroy data or cannot be cleanly undone (force push, hard reset, permanent delete, dropping a table).",
+  "provenance": { "source": "groundspec built-in", "license": "MIT" },
+  "imports": [],
+  "rules": [
+    {
+      "id": "confirm-before-irreversible-action",
+      "version": "0.1.0",
+      "title": "Explicit confirmation before any irreversible action",
+      "purpose": "Prevent unrecoverable loss from a single unconfirmed step.",
+      "scope": "Tasks tagged destructive_irreversible.",
+      "applies_when": { "path": "routing.risk_overlays", "op": "contains", "value": "destructive_irreversible" },
+      "severity": "hard_constraint",
+      "requirement": "Each irreversible action must be named explicitly to the user, along with what would be lost, and confirmed before it runs -- a prior approval for a similar action does not carry forward.",
+      "verification_method": "user_confirmation",
+      "evidence_requirement": "A transcript entry showing the specific irreversible action was confirmed immediately before it ran.",
+      "failure_behavior": "block_completion",
+      "source_or_rationale": "PRD Phase 13: destructive filesystem/repo actions; general safety rules on hard-to-reverse operations."
+    },
+    {
+      "id": "prefer-reversible-alternative",
+      "version": "0.1.0",
+      "title": "Prefer a reversible alternative when one exists",
+      "purpose": "Reduce how often irreversible confirmation is even needed.",
+      "scope": "Tasks tagged destructive_irreversible.",
+      "applies_when": { "path": "routing.risk_overlays", "op": "contains", "value": "destructive_irreversible" },
+      "severity": "soft_objective",
+      "requirement": "Where a reversible action achieves the same goal (move instead of delete, stash instead of reset --hard), it is used instead unless the user explicitly asked for the irreversible form.",
+      "verification_method": "manual_inspection",
+      "evidence_requirement": "The action log shows a reversible path was considered.",
+      "failure_behavior": "downgrade_score",
+      "source_or_rationale": "General safety rules: 'prefer a reversible step over deleting'."
+    }
+  ]
+}

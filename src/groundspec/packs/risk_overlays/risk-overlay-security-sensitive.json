@@ -1,0 +1,40 @@
+{
+  "rule_pack_schema_version": "0.1.0",
+  "pack_id": "risk-overlay-security-sensitive",
+  "version": "0.1.0",
+  "layer": "risk_overlay",
+  "title": "Risk overlay: security-sensitive work",
+  "description": "Pentesting, exploit development, credential testing, C2 tooling, or any dual-use security tool.",
+  "provenance": { "source": "groundspec built-in", "license": "MIT" },
+  "imports": [],
+  "rules": [
+    {
+      "id": "record-authorization-context",
+      "version": "0.1.0",
+      "title": "Dual-use security work requires a recorded authorization context",
+      "purpose": "Distinguish authorized security testing/research from unauthorized attack tooling.",
+      "scope": "Tasks tagged security_sensitive.",
+      "applies_when": { "path": "routing.risk_overlays", "op": "contains", "value": "security_sensitive" },
+      "severity": "hard_constraint",
+      "requirement": "scope.assumptions or brief.context must record the authorization context (pentest engagement, CTF, security research, or defensive use) before dual-use tooling is built or run.",
+      "verification_method": "manual_inspection",
+      "evidence_requirement": "The contract states the authorization context in plain language.",
+      "failure_behavior": "block_completion",
+      "source_or_rationale": "Platform safety rules: dual-use security tools require clear authorization context."
+    },
+    {
+      "id": "no-destructive-or-mass-targeting",
+      "version": "0.1.0",
+      "title": "No destructive techniques, DoS, or mass targeting",
+      "purpose": "Keep security work within defensive/authorized-testing bounds.",
+      "scope": "Tasks tagged security_sensitive.",
+      "applies_when": { "path": "routing.risk_overlays", "op": "contains", "value": "security_sensitive" },
+      "severity": "hard_constraint",
+      "requirement": "No denial-of-service technique, mass-target scanning, supply-chain compromise, or detection-evasion-for-malicious-purposes may be produced, regardless of stated authorization.",
+      "verification_method": "manual_inspection",
+      "evidence_requirement": "A review of the deliverable confirms none of these categories are present.",
+      "failure_behavior": "block_completion",
+      "source_or_rationale": "Platform safety rules: prohibited destructive/DoS/mass-targeting/evasion categories."
+    }
+  ]
+}

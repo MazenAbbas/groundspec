@@ -1,0 +1,40 @@
+{
+  "rule_pack_schema_version": "0.1.0",
+  "pack_id": "risk-overlay-filesystem-mutation",
+  "version": "0.1.0",
+  "layer": "risk_overlay",
+  "title": "Risk overlay: filesystem or repository mutation",
+  "description": "Any task that writes, moves, or restructures files or repository state.",
+  "provenance": { "source": "groundspec built-in", "license": "MIT" },
+  "imports": [],
+  "rules": [
+    {
+      "id": "inspect-before-mutating",
+      "version": "0.1.0",
+      "title": "Inspect existing state before mutating it",
+      "purpose": "Prevent overwriting in-progress or unfamiliar work by acting before understanding what is there.",
+      "scope": "Tasks tagged filesystem_mutation.",
+      "applies_when": { "path": "routing.risk_overlays", "op": "contains", "value": "filesystem_mutation" },
+      "severity": "hard_constraint",
+      "requirement": "Before any write to a pre-existing file or directory, its current state must be read/listed and unfamiliar content must be treated as possibly-in-progress user work, not discarded.",
+      "verification_method": "manual_inspection",
+      "evidence_requirement": "A log entry showing the path was inspected before it was modified.",
+      "failure_behavior": "block_completion",
+      "source_or_rationale": "PRD Phase 13: destructive filesystem actions threat; general safety rules on investigating before overwriting."
+    },
+    {
+      "id": "document-written-paths",
+      "version": "0.1.0",
+      "title": "Every written or modified path is disclosed",
+      "purpose": "Keep filesystem changes auditable.",
+      "scope": "Tasks tagged filesystem_mutation.",
+      "applies_when": { "path": "routing.risk_overlays", "op": "contains", "value": "filesystem_mutation" },
+      "severity": "soft_objective",
+      "requirement": "The final report lists every path created, modified, or deleted.",
+      "verification_method": "manual_inspection",
+      "evidence_requirement": "The report's file list matches the actual diff.",
+      "failure_behavior": "downgrade_score",
+      "source_or_rationale": "PRD Phase 14: 'Explicit about files it reads and writes.'"
+    }
+  ]
+}

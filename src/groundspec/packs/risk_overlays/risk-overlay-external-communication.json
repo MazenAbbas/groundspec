@@ -1,0 +1,40 @@
+{
+  "rule_pack_schema_version": "0.1.0",
+  "pack_id": "risk-overlay-external-communication",
+  "version": "0.1.0",
+  "layer": "risk_overlay",
+  "title": "Risk overlay: external communication or publication",
+  "description": "Anything sent to, or visible by, someone other than the requesting user.",
+  "provenance": { "source": "groundspec built-in", "license": "MIT" },
+  "imports": [],
+  "rules": [
+    {
+      "id": "explicit-permission-before-sending",
+      "version": "0.1.0",
+      "title": "Explicit permission required before any send or publish",
+      "purpose": "Prevent an agent from sending a message or publishing content the user has not actually approved.",
+      "scope": "Tasks tagged external_communication.",
+      "applies_when": { "path": "routing.risk_overlays", "op": "contains", "value": "external_communication" },
+      "severity": "hard_constraint",
+      "requirement": "The exact content and destination must be shown to the user and explicitly confirmed before any send/publish/post action, even if a similar action was approved earlier in the task.",
+      "verification_method": "user_confirmation",
+      "evidence_requirement": "A transcript entry showing the specific content was confirmed before it was sent.",
+      "failure_behavior": "block_completion",
+      "source_or_rationale": "PRD Phase 12/13: 'Explicit permission required' action category."
+    },
+    {
+      "id": "no-fabricated-claims-in-published-content",
+      "version": "0.1.0",
+      "title": "No fabricated statistics, testimonials, or urgency claims",
+      "purpose": "Prevent externally-visible content from misleading its audience.",
+      "scope": "Tasks tagged external_communication, especially content/marketing work.",
+      "applies_when": { "path": "routing.risk_overlays", "op": "contains", "value": "external_communication" },
+      "severity": "hard_constraint",
+      "requirement": "No invented statistic, fake testimonial, or manufactured urgency/scarcity claim may appear in published content.",
+      "verification_method": "manual_inspection",
+      "evidence_requirement": "Every factual claim in the content traces to a source recorded in status.verified_facts.",
+      "failure_behavior": "block_completion",
+      "source_or_rationale": "PRD Phase 15 (Content and marketing): 'Do not optimize engagement through deception...'"
+    }
+  ]
+}

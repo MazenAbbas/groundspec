@@ -1,0 +1,26 @@
+{
+  "rule_pack_schema_version": "0.1.0",
+  "pack_id": "risk-overlay-informational",
+  "version": "0.1.0",
+  "layer": "risk_overlay",
+  "title": "Risk overlay: informational",
+  "description": "Low-risk, read/produce-only work with no external side effects. See PRD Phase 7, Layer 2.",
+  "provenance": { "source": "groundspec built-in", "license": "MIT" },
+  "imports": [],
+  "rules": [
+    {
+      "id": "no-hidden-side-effects",
+      "version": "0.1.0",
+      "title": "Informational tasks must not mutate state",
+      "purpose": "Keep the lowest risk tier honest: it should never surprise the user with a side effect.",
+      "scope": "Tasks whose only risk overlay is 'informational'.",
+      "applies_when": { "path": "routing.risk_overlays", "op": "eq", "value": ["informational"] },
+      "severity": "hard_constraint",
+      "requirement": "No filesystem write outside an explicitly requested output location, no network call with side effects, and no message sent on the user's behalf.",
+      "verification_method": "manual_inspection",
+      "evidence_requirement": "A review of actions taken shows only reads and the requested output artifact.",
+      "failure_behavior": "block_completion",
+      "source_or_rationale": "PRD Phase 7: risk overlay 'Low-risk informational work'."
+    }
+  ]
+}
