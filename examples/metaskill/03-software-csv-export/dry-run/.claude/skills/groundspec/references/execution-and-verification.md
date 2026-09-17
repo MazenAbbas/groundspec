@@ -14,15 +14,6 @@
 - `dimension_scores`: for each of the contract's `quality.soft_objectives`, a 0.0-1.0 score, or omit the dimension entirely if there's genuinely no basis to score it (`groundspec evaluate` reports that as insufficient evidence, not a zero).
 - `acceptance_criteria_results`: for each `acceptance.criteria` entry (at minimum, every `must`-priority one), a literal `true`/`false` for whether it was actually verified. Missing a `must` criterion here is what produces `INCOMPLETE` below -- it is not the same as `false`.
 
-## `groundspec evaluate` prints two separate lines -- don't conflate them
-
-```
-Verdict: insufficient_evidence
-Completion state: PASS
-```
-
-`Verdict:` is the soft-objective rubric's own summary (from `quality.soft_objectives`/`dimension_scores`) -- `insufficient_evidence` there just means no soft objectives were scored (often because none were declared on the contract at all), and it is informational only. `Completion state:` is the one that actually gates PASS/FAIL/etc., per the rules below. Seeing `Verdict: insufficient_evidence` next to `Completion state: PASS` is normal and correct when a contract has no `quality.soft_objectives` -- it is not a contradiction, and it is never a reason to invent `dimension_scores` just to make the verdict line say something else. Report both lines verbatim in your final report; don't paraphrase the verdict line as if it were the gating result.
-
 ## Completion states, mechanically derived
 
 `groundspec.metaskill.completion.derive_completion_state` computes exactly one of these from the inputs above -- report that value verbatim, don't paraphrase it:

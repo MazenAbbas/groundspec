@@ -1,3 +1,9 @@
+---
+name: groundspec
+description: "Turns a natural-language request into a validated Groundspec Task Contract, then guides execution and verification against it. Use for ambiguous, multi-step, high-stakes, or requirements-heavy requests -- not for a single unambiguous, low-risk question a plain answer already resolves."
+when_to_use: "Invoke explicitly with /groundspec, or let it activate automatically for a request that needs real scoping: an ambiguous ask, a multi-step project, anything involving publishing/spending/deleting/production/personal data, or a request to audit an existing plan, PRD, prompt, contract, or deliverable."
+---
+
 # Groundspec Meta-Skill
 
 Turns a natural-language request into a validated, auditable Groundspec Task Contract, then guides execution and verification against it -- without the user ever hand-writing TOML or reading the JSON Schema.
@@ -18,7 +24,7 @@ Use it for a request that is ambiguous, multi-step, spans more than a few minute
 | **Guided** | product/research/engineering/professional work | Prioritized clarification questions, exposes goal/deliverable/stakeholders/constraints/acceptance/evidence/risk/loss-function/budget explicitly, explains trade-offs in plain language, shows a contract preview before consequential execution. |
 | **Audit** | an existing plan, PRD, prompt, contract, repo, or deliverable | Finds ambiguity, contradictions, missing evidence, hidden assumptions, unverifiable claims, unsafe operations, weak acceptance criteria. Returns a corrected contract or a precise remediation report. Never modifies the audited artifact unless asked to. |
 
-Detect the mode from the request's phrasing and stakes (see `references/clarification-policy.md` for the exact signal list), but honor an explicit override (e.g. "in guided mode," "just audit this, don't fix it"). Mode mainly controls the *question budget and how much is explained up front* -- it does not gate safety-relevant behavior on its own. A request that reads as both "professional work" and "a fast, well-scoped ask" doesn't need to be resolved by picking harder: whatever mode you pick, the contract preview and every authorization gate still fire independently, driven by `routing.risk_overlays` (see the state machine below and `routing-and-risk.md`), not by which mode was chosen.
+Detect the mode from the request's phrasing and stakes (see `references/clarification-policy.md` for the exact signal list), but honor an explicit override (e.g. "in guided mode," "just audit this, don't fix it").
 
 ## Task intents
 

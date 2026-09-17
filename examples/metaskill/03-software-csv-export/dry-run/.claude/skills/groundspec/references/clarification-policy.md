@@ -2,18 +2,14 @@
 
 ## Classify every missing piece of information, then act on the class
 
-| Class | `scope.open_questions[].classification` value | Meaning | Action |
-|---|---|---|---|
-| Blocking | `blocking` | No useful progress is possible without an answer -- guessing risks building the wrong thing entirely. | Ask. Always. Before contract construction. |
-| High-value | `high_value` **(requires `contract_schema_version: "0.2.0"` -- see below)** | Not strictly blocking, but the answer would materially change the deliverable and a wrong guess is costly to undo. | Ask, if the question budget (below) allows it. |
-| Defaultable | `important_defaultable` | A safe, stated default preserves the user's likely intent. | Do not ask. Apply the default and record it in `scope.assumptions` with its confidence and why it's safe -- do not also add an open_questions entry for it. |
-| Optional | *(not recorded)* | Doesn't materially change the result either way. | Do not ask. Don't even mention it, and don't record it in the contract at all. |
+| Class | Meaning | Action |
+|---|---|---|
+| `blocking` | No useful progress is possible without an answer -- guessing risks building the wrong thing entirely. | Ask. Always. Before contract construction. |
+| `high-value` | Not strictly blocking, but the answer would materially change the deliverable and a wrong guess is costly to undo. | Ask, if the question budget (below) allows it. |
+| `defaultable` | A safe, stated default preserves the user's likely intent. | Do not ask. Apply the default and record it in `scope.assumptions` with its confidence and why it's safe. |
+| `optional` | Doesn't materially change the result either way. | Do not ask. Don't even mention it unless the user asks. |
 
-Use the exact schema enum value in the second column when writing `scope.open_questions[].classification` -- the prose names above (blocking/high-value/defaultable/optional) are for talking about the policy, not literal field values.
-
-**Schema version note:** `high_value` only exists in `contract_schema_version: "0.2.0"` (added specifically for this Skill). If `groundspec create` on this installation still defaults to `"0.1.0"` (check with `groundspec doctor` or by looking at a freshly created contract), either set `contract_schema_version` to `"0.2.0"` by hand before validating, or fall back to recording a high-value item as `important_defaultable` with a note in its `scope.assumptions` rationale that it was actually asked, not defaulted -- never invent a schema value that doesn't validate.
-
-For each item, ask: would the answer materially change the deliverable? Does a safe default exist? Can it be discovered from context already given? Would guessing create real risk (cost, irreversibility, safety, publication)? A `yes` to the first and a `no` to the second usually means blocking or high-value; a safe default pushes it to defaultable.
+For each item, ask: would the answer materially change the deliverable? Does a safe default exist? Can it be discovered from context already given? Would guessing create real risk (cost, irreversibility, safety, publication)? A `yes` to the first and a `no` to the second usually means `blocking` or `high-value`; a safe default pushes it to `defaultable`.
 
 ## Question budgets by mode
 

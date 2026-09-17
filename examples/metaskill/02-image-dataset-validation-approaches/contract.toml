@@ -1,0 +1,71 @@
+contract_schema_version = "0.2.0"
+task_id = "image-dataset-validation-approaches"
+[[acceptance.criteria]]
+description = "Exactly three local-first approaches are compared on the same criteria"
+evidence_required = "the report's comparison table has three rows and consistent columns"
+id = "three-approaches-compared"
+priority = "must"
+verification_method = "manual_inspection"
+[[acceptance.criteria]]
+description = "Every claim is labeled as either sourced evidence or the researcher's own inference"
+evidence_required = "status.verified_facts vs status.unverified_claims/remaining_uncertainty are both populated and distinct"
+id = "evidence-vs-inference-separated"
+priority = "must"
+verification_method = "manual_inspection"
+[[acceptance.criteria]]
+description = "The research is completed, or honestly reported as partial, within the 4-hour budget"
+evidence_required = "status.budget_expired and status.completion_status are consistent with groundspec.budget.model.forbid_silent_skip_on_expiry"
+id = "within-time-budget"
+priority = "must"
+verification_method = "automated_test"
+[brief]
+context = ""
+goal = "Produce a comparison of three local-first image-dataset validation approaches -- coverage, cost/compute, and failure modes -- completed within a 4-hour research budget, with verified findings kept explicitly separate from inference."
+inputs = []
+normalized_problem_statement = "No comparison exists yet between candidate local-first (offline, no cloud upload) approaches for validating an image dataset, and there's no time-boxed plan for producing one."
+raw_user_brief = "Use Groundspec to compare three local-first image-dataset validation approaches under a four-hour research budget. Separate verified evidence from inference."
+target_users = ["the engineer deciding which validation approach to adopt"]
+[[brief.expected_deliverables]]
+description = "A structured comparison of the three approaches with sourced findings and labeled inference"
+name = "comparison_report"
+[budget]
+max_clarification_questions = 3
+max_execution_iterations = 20
+max_planning_iterations = 3
+research_depth = "standard"
+reserved_verification_fraction = 0.2
+time_budget_minutes = 240
+tool_call_budget = 50
+[control]
+escalation_conditions = []
+stop_conditions = []
+[quality]
+hard_constraints = []
+soft_objectives = []
+[routing]
+risk_level = "low"
+risk_overlays = ["informational"]
+[routing.authorization]
+boundaries = []
+granted_permissions = []
+requires_confirmation_for = []
+[[routing.domain_packs]]
+pack_id = "research"
+version = "0.1.0"
+[scope]
+assumptions = []
+constraints = ["Local-first / offline-capable approaches only -- no cloud-hosted-only tools", "Hard 4-hour research time budget"]
+non_goals = []
+[[scope.open_questions]]
+answer = "No specific tools were named in the brief, so the research selects three representative local-first approaches itself (e.g. a rule-based checker, a statistical/embedding-based outlier detector, and a lightweight model-assisted checker) and states the selection rationale up front."
+classification = "blocking"
+question = "Which three specific approaches/tools should be compared, or should the research select three representative ones itself?"
+resolution_status = "answered"
+[status]
+budget_expired = false
+completion_status = "not_started"
+omitted_work = []
+remaining_uncertainty = []
+residual_risks = []
+unverified_claims = []
+verified_facts = []

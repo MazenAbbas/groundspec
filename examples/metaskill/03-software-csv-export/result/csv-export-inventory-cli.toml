@@ -1,0 +1,148 @@
+contract_schema_version = "0.1.0"
+task_id = "csv-export-inventory-cli"
+[acceptance]
+[[acceptance.criteria]]
+id = "json-contract-unchanged"
+description = "Running `python inventory.py report` with no --format flag prints the exact same JSON array as before ({sku,name,qty} objects), and the existing test_inventory.py::test_report_json_contract_unchanged test passes unmodified."
+priority = "must"
+verification_method = "automated_test"
+evidence_required = "pytest output showing test_report_json_contract_unchanged PASSED, plus the raw stdout of `python inventory.py report` matching the original expected JSON array."
+
+[[acceptance.criteria]]
+id = "csv-export-works"
+description = "Running `python inventory.py report --format csv` prints a CSV representation of the same inventory data (header row sku,name,qty followed by one data row per item) to stdout."
+priority = "must"
+verification_method = "automated_test"
+evidence_required = "A new automated test asserting the CSV output's header and rows match the inventory data, plus the raw command output from an actual run."
+
+[[acceptance.criteria]]
+id = "format-flag-validated"
+description = "An invalid --format value (anything other than json or csv) is rejected at argument-parsing time with a non-zero exit code rather than silently falling through to a default."
+priority = "should"
+verification_method = "automated_test"
+evidence_required = "Test or command run showing `--format bogus` exits non-zero via argparse's choices validation."
+
+[[acceptance.criteria]]
+id = "no-new-dependencies"
+description = "The CSV export implementation uses only the Python standard library (no new third-party dependency added to satisfy this task)."
+priority = "should"
+verification_method = "static_analysis"
+evidence_required = "Inspection of inventory.py's imports showing only stdlib modules (csv, json, argparse, sys, pathlib)."
+[brief]
+context = ""
+goal = "Add a CSV export capability to inventory.py's report command while leaving the existing default JSON output byte-for-byte compatible with the current contract."
+inputs = []
+normalized_problem_statement = "inventory.py's report command only emits JSON; some downstream consumers need CSV, but any change must not alter or remove the existing JSON output that other consumers already depend on."
+raw_user_brief = "Use Groundspec to add CSV export to an existing Python CLI without breaking its JSON contract."
+target_users = ["Scripts and users that currently parse inventory.py's JSON report output", "Users who want a CSV export of inventory for spreadsheets/other tooling"]
+[[brief.expected_deliverables]]
+description = "A --format {json,csv} option on inventory.py's report command, defaulting to json, that emits CSV rows for {sku,name,qty} when --format csv is passed"
+name = "csv-export-flag"
+[[brief.expected_deliverables]]
+description = "Proof that the existing JSON contract (default report invocation, and the existing test_inventory.py test) is unchanged"
+name = "regression-safety"
+[budget]
+max_clarification_questions = 3
+max_execution_iterations = 5
+max_planning_iterations = 2
+research_depth = "shallow"
+reserved_verification_fraction = 0.2
+time_budget_minutes = 30
+tool_call_budget = 25
+[control]
+escalation_conditions = []
+stop_conditions = []
+[quality]
+hard_constraints = []
+soft_objectives = []
+[routing]
+risk_level = "medium"
+risk_overlays = ["filesystem_mutation"]
+[routing.authorization]
+boundaries = []
+granted_permissions = []
+requires_confirmation_for = []
+[[routing.domain_packs]]
+pack_id = "software"
+version = "0.1.0"
+[scope]
+constraints = [
+  "The default invocation `python inventory.py report` (no --format flag) must continue to print the exact same JSON array to stdout as before, verified by the existing test_inventory.py::test_report_json_contract_unchanged.",
+  "Only files under examples/metaskill/03-software-csv-export/fixture/ may be modified for the implementation; contract and evidence artifacts go under examples/metaskill/03-software-csv-export/result/. No other files anywhere in the groundspec repository may be touched.",
+  "No changes to the --data flag's behavior, the argument-parser structure for any other command, or the exit code of the existing report path.",
+]
+non_goals = [
+  "Does not add CSV export to any command other than `report` (there is only one command).",
+  "Does not add a way to write CSV directly to a file (e.g. --output); stdout only, matching existing behavior.",
+  "Does not change the JSON field names, order, or types of the existing report output.",
+]
+
+[[scope.assumptions]]
+statement = "CSV export is added as a `--format {json,csv}` option on the existing `report` subcommand, defaulting to `json`, rather than a new separate subcommand -- this is the smallest change that keeps the current invocation byte-for-byte compatible."
+confidence = "high"
+safe_default = true
+
+[[scope.assumptions]]
+statement = "CSV output is written to stdout, matching the existing report command's behavior, rather than to a file -- the request did not ask for file output and stdout keeps the command composable with shell redirection."
+confidence = "high"
+safe_default = true
+
+[[scope.assumptions]]
+statement = "CSV columns are sku,name,qty in that order with a header row, generated via Python's stdlib csv module with its default dialect (comma-delimited, minimal quoting), matching the field order of the existing JSON objects."
+confidence = "medium"
+safe_default = true
+
+[[scope.assumptions]]
+statement = "No new third-party dependency is introduced; CSV support uses only the Python standard library csv module."
+confidence = "high"
+safe_default = true
+
+[[scope.open_questions]]
+question = "Should CSV export be a new flag on the existing `report` command, or a separate subcommand (e.g. `report-csv`)?"
+classification = "important_defaultable"
+resolution_status = "defaulted"
+default_applied = "Added a --format {json,csv} flag on the existing report command, defaulting to json, per scope.assumptions."
+
+[[scope.open_questions]]
+question = "Should CSV be written to stdout or to a file on disk?"
+classification = "important_defaultable"
+resolution_status = "defaulted"
+default_applied = "Write to stdout, consistent with the existing report command's behavior, per scope.assumptions."
+[status]
+budget_expired = false
+completion_status = "complete"
+omitted_work = []
+remaining_uncertainty = [
+  "No test exercises inventory data containing special CSV characters (commas, quotes, newlines) in sku/name fields, since the existing fixture data.json does not contain any.",
+]
+unverified_claims = []
+
+[[status.verified_facts]]
+statement = "pytest run of examples/metaskill/03-software-csv-export/fixture/test_inventory.py (4 tests, including the original test_report_json_contract_unchanged) passed: '4 passed in 0.94s'."
+evidence_label = "VERIFIED"
+source = "C:\\linkedin\\projects\\groundspec\\.venv\\Scripts\\python.exe -m pytest examples/metaskill/03-software-csv-export/fixture/test_inventory.py -v"
+
+[[status.verified_facts]]
+statement = "Manual run of `python inventory.py report` (no flag) prints the exact same JSON array as before ({sku,name,qty} for A100/Widget/42 and B200/Gadget/7), confirming the default JSON contract is unchanged."
+evidence_label = "VERIFIED"
+source = "Direct command run in fixture/, output captured and compared to test_inventory.py's expected data."
+
+[[status.verified_facts]]
+statement = "Manual run of `python inventory.py report --format csv` prints 'sku,name,qty' header followed by 'A100,Widget,42' and 'B200,Gadget,7' -- CSV export works as specified."
+evidence_label = "VERIFIED"
+source = "Direct command run in fixture/."
+
+[[status.verified_facts]]
+statement = "`python inventory.py report --format bogus` exits with code 2 and argparse error 'invalid choice: bogus (choose from json, csv)', so an invalid --format value is rejected rather than silently accepted."
+evidence_label = "VERIFIED"
+source = "Direct command run in fixture/; exit code captured."
+
+[[status.verified_facts]]
+statement = "inventory.py's only imports after the change are argparse, csv, json, sys, and pathlib -- all Python standard library, no new third-party dependency."
+evidence_label = "VERIFIED"
+source = "Direct inspection of the edited fixture/inventory.py source."
+
+[[status.residual_risks]]
+risk = "CSV export uses Python's csv module default dialect with no explicit quoting strategy; if a future sku/name/qty value contains a comma, quote character, or newline, the CSV row would need quoting that was never exercised by these tests (the current fixture data has no such values)."
+severity = "low"
+mitigation = "csv.DictWriter already applies default quoting (QUOTE_MINIMAL) automatically for such values; no code change needed, but this edge case has no dedicated test."

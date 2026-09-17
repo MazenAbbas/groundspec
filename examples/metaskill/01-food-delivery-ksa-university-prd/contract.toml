@@ -1,0 +1,84 @@
+contract_schema_version = "0.2.0"
+task_id = "food-delivery-ksa-university-prd"
+[[acceptance.criteria]]
+description = "PRD names target users, the core order-to-delivery journey, and MVP scope boundaries"
+evidence_required = "reviewer confirms all three elements are present and specific, not generic"
+id = "prd-covers-core-elements"
+priority = "must"
+verification_method = "manual_inspection"
+[[acceptance.criteria]]
+description = "At least 3 highest-risk assumptions are explicitly identified and ranked by potential impact"
+evidence_required = "the PRD's risk section lists and orders them, not just mentions them in passing"
+id = "highest-risk-assumptions-ranked"
+priority = "must"
+verification_method = "manual_inspection"
+[[acceptance.criteria]]
+description = "No specific Saudi market statistic (market size, payment-mix percentage, etc.) is stated as fact without a cited source"
+evidence_required = "every quantitative market claim traces to status.verified_facts or is explicitly framed as an assumption/open question"
+id = "no-fabricated-market-data"
+priority = "must"
+verification_method = "manual_inspection"
+[brief]
+context = ""
+goal = "Produce a PRD-shaped planning document for a food-delivery app targeting university students in Saudi Arabia, with the highest-risk assumptions explicitly identified and ranked."
+inputs = []
+normalized_problem_statement = "No PRD exists yet for a campus-focused food-delivery product, and the riskiest assumptions behind it (payment mix, campus access, delivery logistics) haven't been surfaced or ranked."
+raw_user_brief = "Use Groundspec in Guided mode to study a food-delivery application for university students in Saudi Arabia. Produce a PRD and identify the highest-risk assumptions."
+target_users = ["university students in Saudi Arabia (end users of the eventual app)", "the founding/product team reading this PRD to decide whether to build it"]
+[[brief.expected_deliverables]]
+description = "A PRD-structured planning document: problem, target users, MVP scope, non-goals, and a ranked list of the highest-risk assumptions"
+name = "prd_outline"
+[budget]
+max_clarification_questions = 3
+max_execution_iterations = 20
+max_planning_iterations = 3
+research_depth = "standard"
+reserved_verification_fraction = 0.15
+time_budget_minutes = 90
+tool_call_budget = 50
+[control]
+escalation_conditions = []
+stop_conditions = []
+[quality]
+hard_constraints = []
+soft_objectives = []
+[routing]
+risk_level = "low"
+risk_overlays = ["informational"]
+[routing.authorization]
+boundaries = []
+granted_permissions = []
+requires_confirmation_for = []
+[[routing.domain_packs]]
+pack_id = "software"
+version = "0.1.0"
+[[routing.domain_packs]]
+pack_id = "research"
+version = "0.1.0"
+[scope]
+constraints = []
+non_goals = ["Actually building or shipping the app", "Nationwide launch scope -- this PRD is for a single-city pilot", "Verified real-world market sizing (this is a planning contract, not a completed research report)"]
+[[scope.assumptions]]
+confidence = "medium"
+safe_default = true
+statement = "A single-city pilot (one or two campuses in Riyadh or Jeddah) is the right starting scope, not all of Saudi Arabia at once."
+[[scope.assumptions]]
+confidence = "medium"
+safe_default = true
+statement = "Campus-adjacent restaurants are logistically simpler for a pilot than delivering from across the city."
+[[scope.open_questions]]
+classification = "high_value"
+question = "What's the actual payment mix among target students (card/mada, STC Pay-style wallets, or cash on delivery)? This changes checkout design and unit economics."
+resolution_status = "open"
+[[scope.open_questions]]
+classification = "high_value"
+question = "Is there an existing university partnership for campus access, or must one be assumed/negotiated?"
+resolution_status = "open"
+[status]
+budget_expired = false
+completion_status = "not_started"
+omitted_work = []
+remaining_uncertainty = []
+residual_risks = []
+unverified_claims = []
+verified_facts = []
