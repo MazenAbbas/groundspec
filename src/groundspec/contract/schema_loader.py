@@ -12,7 +12,7 @@ from functools import cache
 from importlib import resources
 from typing import Any
 
-SUPPORTED_CONTRACT_VERSIONS = ("0.1.0", "0.2.0")
+SUPPORTED_CONTRACT_VERSIONS = ("0.1.0", "0.2.0", "0.3.0")
 SUPPORTED_RULE_PACK_VERSIONS = ("0.1.0",)
 
 
