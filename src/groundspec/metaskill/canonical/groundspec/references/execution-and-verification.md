@@ -1,5 +1,29 @@
 # Execution, evidence, and verification
 
+## Exact field names for `status.verified_facts` / `status.unverified_claims` / `status.residual_risks`
+
+Get these exactly right the first time -- two independent forward tests of this Skill both had their first `groundspec validate` fail on these field names, since the shapes weren't spelled out here before (only in the raw JSON Schema, `task_contract.v0_3_0.schema.json`, which is a fallback, not the primary reference):
+
+```toml
+[[status.verified_facts]]
+statement = "..."
+evidence_label = "VERIFIED"   # or MEASURED / SOURCE_VERIFIED / USER_CONFIRMED / HUMAN-REVIEWED
+source = "..."                # optional
+
+[[status.unverified_claims]]
+statement = "..."
+reason = "..."                 # required -- not evidence_label alone
+evidence_label = "ASSUMPTION"  # optional; or MODEL-EVALUATED / RESEARCH_NEEDED / PROPOSED / PENDING_EXTERNAL_VALIDATION / OUT_OF_SCOPE
+
+[[status.residual_risks]]
+risk = "..."                    # NOT "description"
+severity = "critical"           # low / medium / high / critical
+mitigation = "..."               # optional
+affects_deliverable_validity = false  # optional, defaults true -- see below
+```
+
+If you'd rather avoid the TOML array-of-tables ordering footgun below entirely, inline-table array syntax is equally valid and schema-identical: `status.verified_facts = [{statement = "...", evidence_label = "VERIFIED"}]`. Both forms produce the same JSON; use whichever is easier for your editing tool to get right.
+
 ## The `evidence.json` shape `groundspec evaluate` reads
 
 ```json
@@ -15,7 +39,8 @@
 
 - `hard_constraint_results`: for each applicable hard constraint `groundspec audit` listed, record whether it actually held. Omit one you never checked -- don't guess `true`.
 - `dimension_scores`: for each of the contract's `quality.soft_objectives`, a 0.0-1.0 score, or omit the dimension entirely if there's genuinely no basis to score it (`groundspec evaluate` reports that as insufficient evidence, not a zero).
-- `acceptance_criteria_results`: for each `acceptance.criteria` entry (at minimum, every `must`-priority one), either a plain `true`/`false` (legacy shape, still supported), or -- preferred -- `{"met": bool, "evidence_label": "<label>"}` so the evaluator can check the label matches the strength the criterion's own `verification_method` actually requires (see "Evidence taxonomy" below). Missing a `must` criterion here produces `INCOMPLETE`; a weak label on a criterion whose `verification_method` demands real evidence *also* produces `INCOMPLETE`, not a silent `PASS` -- see `test_model_evaluated_label_is_inadequate_for_automated_test_criterion` in this repo's test suite for exactly this case.
+- `acceptance_criteria_results`: for each `acceptance.criteria` entry (at minimum, every `must`-priority one), either a plain `true`/`false` (legacy shape, still supported), or -- preferred -- `{"met": bool, "evidence_label": "<label>"}` so the evaluator can check the label matches the strength the criterion's own `verification_method` actually requires (see "Evidence taxonomy" below). Missing a `must` criterion here produces `INCOMPLETE`.
+  **Which verification methods demand real evidence, and which accept a self-review:** `automated_test`, `reproducible_command`, `static_analysis`, and `external_reference_check` all demand real, independent evidence -- a weak label (`MODEL-EVALUATED`/`PROPOSED`/`ASSUMPTION`/`RESEARCH_NEEDED`) on one of these produces `INCOMPLETE`, not a silent `PASS` (see `test_model_evaluated_label_is_inadequate_for_automated_test_criterion`). `manual_inspection` and `user_confirmation`, by contrast, are *defined* as judgment-based -- a `MODEL-EVALUATED` label is the expected, adequate evidence for a `manual_inspection` criterion (it is what "the executor inspected and judged it" actually means), and this is treated as adequate, not weak. Two independent forward tests both had to infer this distinction because it wasn't spelled out before; do not assume `manual_inspection` demands the same evidence strength as `automated_test`.
 - `authorization_violations`: a list of plain-language descriptions of anything done that the contract's `routing.authorization` didn't actually permit. Empty list if none. Any non-empty list forces `FAIL` regardless of everything else -- see "Authorization" below.
 
 ## Evidence taxonomy -- use the right label, every time
@@ -65,7 +90,7 @@ Completion state: PASS
 - **`BLOCKED`** -- a `blocking`-classified open question is still unresolved. Nothing below matters until it's answered.
 - **`FAIL`** -- any of: an explicit authorization boundary was violated (`authorization_violations` non-empty); a hard constraint that applied did not hold; a `must` acceptance criterion was checked and failed; or an unresolved residual risk is both `severity: critical` and marked (or defaulted -- see below) as affecting the deliverable's own validity.
 - **`INCOMPLETE`** -- at least one `must` acceptance criterion has no recorded result, *or* has only a weak evidence label (`MODEL-EVALUATED`/`PROPOSED`/`ASSUMPTION`/`RESEARCH_NEEDED`) where its own `verification_method` demanded real evidence. This is deliberately distinct from `FAIL`: it means "not enough evidence to say," not "verified wrong."
-- **`PASS_WITH_CAVEATS`** -- every gate above cleared, but `status.budget_expired` is true. Time pressure is a standing reason to distrust unexplored edge cases even when everything actually checked came back clean.
+- **`PASS_WITH_CAVEATS`** -- every gate above cleared, but either `status.budget_expired` is true, or at least one `high_value` open question was resolved by defaulting rather than by the user actually answering it. Time pressure is a standing reason to distrust unexplored edge cases even when everything actually checked came back clean; an unconfirmed material judgment call is a standing reason to distrust whether the deliverable matches actual intent, even when everything you *did* check came back clean. Note this applies even to a `high_value` item you disclosed responsibly with a stated default -- doing that is still the correct thing to do (see `clarification-policy.md`), it just means the honest completion state is "passed, with caveats," not a bare "passed."
 - **`PASS`** -- every gate above cleared and the budget wasn't exhausted.
 
 Soft-objective scores (`dimension_scores`) never change this state -- they're an improvable quality signal reported alongside it, never a gate (same principle as the deterministic engine's hard-constraint-beats-soft-score rule).

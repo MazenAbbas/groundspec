@@ -30,9 +30,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_create.add_argument("--problem")
     p_create.add_argument("--user", action="append", help="Repeatable: a target user/beneficiary.")
     p_create.add_argument("--deliverable", action="append", help="Repeatable: name:description.")
-    p_create.add_argument("--risk-overlay", action="append", choices=sorted(RISK_OVERLAY_PACK_IDS))
+    p_create.add_argument(
+        "--risk-overlay", action="append", choices=sorted(RISK_OVERLAY_PACK_IDS), help="Repeatable."
+    )
     p_create.add_argument("--risk-level", choices=["low", "medium", "high", "critical"])
-    p_create.add_argument("--domain", action="append", choices=sorted(DOMAIN_PACK_IDS))
+    p_create.add_argument("--domain", action="append", choices=sorted(DOMAIN_PACK_IDS), help="Repeatable.")
     p_create.add_argument("--out")
     p_create.set_defaults(func=commands.cmd_create)
 

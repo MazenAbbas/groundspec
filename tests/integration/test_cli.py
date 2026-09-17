@@ -165,3 +165,14 @@ def test_example_writes_valid_contracts(tmp_path: Path):
     assert len(written) >= 2
     for path in written:
         assert run(["validate", str(path)]) == 0
+
+
+def test_repeatable_flags_document_themselves_in_help(capsys):
+    with pytest.raises(SystemExit):
+        run(["create", "--help"])
+    help_text = capsys.readouterr().out
+    for flag in ("--user", "--deliverable", "--risk-overlay", "--domain"):
+        assert flag in help_text
+    # Regression: --domain/--risk-overlay silently accepted repeats without
+    # documenting it, unlike --user/--deliverable -- caught by forward testing.
+    assert help_text.count("Repeatable") >= 4
