@@ -18,6 +18,20 @@ v0.2.0rc1 found ``PASS`` reported despite an unresolved critical risk,
 model-self-evaluated 'must' criteria, and an authorization-boundary
 violation -- see docs/threat-model.md and CHANGELOG.md's [0.2.0rc2] entry
 for the full account.
+
+Hardened again in schema/behavior revision 0.4.0 after a second live user
+test (a Riyadh university-student food-delivery PRD) reported an
+unconditional ``PASS`` despite: an unsupported market/competitor claim with
+no evidence record at all; a materially outcome-changing city/campus
+decision silently promoted from illustrative anchor to confirmed scope; a
+conditional regulatory rule (Saudi ZATCA VAT deemed-supplier treatment)
+generalized past its actual conditions; and a secondary news source treated
+as if it were official regulatory confirmation. See
+``groundspec.contract.schema.task_contract.v0_4_0``'s ``claim_record`` and
+``docs/architecture.md``'s material-claim policy for the structural side of
+the fix; ``has_unmapped_material_claims`` and
+``claim_ledger_has_disclosed_material_limitations`` below are the runtime
+side.
 """
 
 from __future__ import annotations
@@ -144,6 +158,27 @@ def has_deferred_high_value_open_questions(open_questions: list[dict[str, object
     )
 
 
+_MATERIAL_CLAIM_WEAK_LABELS: frozenset[str] = frozenset(
+    {"SECONDARY_SOURCE_SUPPORTED", "MODEL_EVALUATED", "ASSUMPTION", "RESEARCH_NEEDED"}
+)
+
+
+def claim_ledger_has_disclosed_material_limitations(claim_ledger: list[dict[str, object]]) -> bool:
+    """True if any ``status.claim_ledger`` entry that affects a material
+    dimension (``affects`` non-empty -- see the 0.4.0 schema's
+    ``claim_record``) relies on less-than-strong evidence: secondary
+    support, the executor's own judgment, a stated assumption, or a bounded
+    research gap. This is a *disclosed* limitation, not a defect -- a
+    properly-labeled, properly-qualified secondary source or a properly
+    bounded RESEARCH_NEEDED gap is exactly the honest thing to record. It is
+    also exactly what keeps a deliverable that rests on it from reporting a
+    bare, unqualified PASS (see ``derive_completion_state``)."""
+    return any(
+        claim.get("affects") and claim.get("evidence_label") in _MATERIAL_CLAIM_WEAK_LABELS
+        for claim in claim_ledger
+    )
+
+
 def derive_completion_state(
     *,
     hard_constraints_passed: bool,
@@ -153,6 +188,8 @@ def derive_completion_state(
     authorization_boundary_violated: bool = False,
     unresolved_critical_risk_to_validity: bool = False,
     has_deferred_high_value_items: bool = False,
+    has_unmapped_material_claims: bool = False,
+    has_disclosed_material_limitations: bool = False,
 ) -> CompletionState:
     """Pure function: identical inputs always produce the identical state.
 
@@ -176,17 +213,31 @@ def derive_completion_state(
          to produce does NOT reach this function as True -- see that
          helper's docstring; this deliberately does not auto-fail every
          critical finding, only ones marked as undermining validity.
-      7. Every 'must' criterion met, no violation, no blocking risk: PASS,
-         or PASS_WITH_CAVEATS if the budget ran out along the way (budget
+      7. A material factual claim (one affecting the problem definition,
+         market size, legal/regulatory or financial feasibility, risk
+         severity, product scope, acceptance thresholds, or a go/no-go
+         recommendation) with no corresponding ``status.claim_ledger``
+         entry at all -- INCOMPLETE (see has_unmapped_material_claims):
+         not proven wrong, just not evidenced, exactly like an
+         acceptance criterion with no recorded result.
+      8. Every 'must' criterion met, no violation, no blocking risk, every
+         material claim at least mapped to a ledger entry: PASS, or
+         PASS_WITH_CAVEATS if the budget ran out along the way (budget
          pressure always downgrades a PASS, because time pressure is a
-         standing reason to distrust unexplored edge cases) *or* if any
+         standing reason to distrust unexplored edge cases), or if any
          high-value clarification item was deferred/defaulted rather than
-         actually confirmed by the user (see has_deferred_high_value_items):
-         a disclosed, responsible default is not a defect, but a deliverable
-         resting on several unconfirmed material judgment calls is not a
-         plain, unqualified PASS either -- two independent live runs of
-         this exact policy reached PASS with six such defaults apiece
-         before this gate existed, which is the reason it does now.
+         actually confirmed by the user (has_deferred_high_value_items), or
+         if any material claim rests on disclosed secondary support, model
+         judgment, a stated assumption, or a bounded research gap rather
+         than strong evidence (has_disclosed_material_limitations): a
+         disclosed, responsible default or a properly-labeled secondary
+         source is not a defect, but a deliverable resting on several such
+         unconfirmed or under-evidenced material judgment calls is not a
+         plain, unqualified PASS either -- a live run reported bare PASS on
+         a PRD whose problem statement, market claims, and a conditional
+         tax rule all rested on exactly this kind of undisclosed-as-such
+         evidence before this gate existed, which is the reason it does
+         now.
     """
     if has_unresolved_blocking_questions:
         return "BLOCKED"
@@ -200,6 +251,8 @@ def derive_completion_state(
         return "FAIL"
     if unresolved_critical_risk_to_validity:
         return "FAIL"
-    if budget_expired or has_deferred_high_value_items:
+    if has_unmapped_material_claims:
+        return "INCOMPLETE"
+    if budget_expired or has_deferred_high_value_items or has_disclosed_material_limitations:
         return "PASS_WITH_CAVEATS"
     return "PASS"

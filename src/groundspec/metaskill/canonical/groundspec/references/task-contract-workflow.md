@@ -28,7 +28,7 @@ groundspec create --task-id <slug> \
 
 This produces a schema-valid skeleton with safe defaults. Then edit the generated file's `scope` (constraints/non_goals/assumptions/open_questions), `acceptance.criteria`, `budget`, and (once you have results -- see step 8) `status` sections to reflect what you actually determined -- editing a CLI-generated, already-valid file is not "hand-authoring," it's filling in fields the CLI left as explicit, documented defaults. `status` is not optional to fill in later: several hard constraints (`no-claiming-unperformed-work`, `report-limitations-and-uncertainty`, `evidence-based-completion`) require it to be populated before an honest `PASS` is possible. If you don't have file-editing tools available, describe the exact field values to the user or to whatever tool does have file access; do not fabricate a plausible-looking contract from memory instead of running `create`.
 
-**TOML editing footgun:** if you hand-edit the TOML file, populate a table's plain `key = value` lines *before* opening any `[[table.subarray]]` array-of-tables block inside it. Once you write e.g. `[[status.verified_facts]]`, TOML scopes every following bare key to that array entry, not back to `[status]` -- so a `remaining_uncertainty = [...]` line written after it silently attaches to the wrong place and can fail schema validation in a confusing way (or worse, silently attach to the last array entry if that happens to accept extra-shaped data). Order within `[status]`: `completion_status`, `budget_expired`, `omitted_work`, `unverified_claims`, `remaining_uncertainty` first, then any `[[status.verified_facts]]` / `[[status.residual_risks]]` blocks last.
+**TOML editing footgun:** if you hand-edit the TOML file, populate a table's plain `key = value` lines *before* opening any `[[table.subarray]]` array-of-tables block inside it. Once you write e.g. `[[status.verified_facts]]`, TOML scopes every following bare key to that array entry, not back to `[status]` -- so a `remaining_uncertainty = [...]` line written after it silently attaches to the wrong place and can fail schema validation in a confusing way (or worse, silently attach to the last array entry if that happens to accept extra-shaped data). Order within `[status]`: `completion_status`, `budget_expired`, `omitted_work`, `unverified_claims`, `remaining_uncertainty` first, then any `[[status.verified_facts]]` / `[[status.residual_risks]]` / `[[status.claim_ledger]]` blocks last.
 
 ## 4. Route packs and risk
 
@@ -58,7 +58,7 @@ Track against `budget.time_budget_minutes`, `max_execution_iterations`, and `too
 
 ## 8. Collect evidence -- concrete, not narrative
 
-For each `acceptance.criteria` entry, record a literal true/false result (did this specific, checkable thing happen or not), plus enough detail that a skeptical reader could check it. See `execution-and-verification.md` for exactly what shape this takes and how it feeds `groundspec evaluate`.
+For each `acceptance.criteria` entry, record a literal true/false result (did this specific, checkable thing happen or not), plus enough detail that a skeptical reader could check it. For each **material factual claim** in the deliverable (one affecting the problem definition, market size, legal/regulatory or financial feasibility, risk severity, product scope, an acceptance threshold, or a go/no-go recommendation), add a `[[status.claim_ledger]]` entry with an honest `evidence_label` -- see `execution-and-verification.md`'s "claim ledger" section for exactly what shape this takes and how it feeds `groundspec evaluate`.
 
 ## 9. Evaluate acceptance and report a completion state
 
@@ -66,7 +66,7 @@ For each `acceptance.criteria` entry, record a literal true/false result (did th
 groundspec evaluate <slug>.toml <result-dir>/
 ```
 
-where `<result-dir>/evidence.json` contains `hard_constraint_results`, `dimension_scores`, `acceptance_criteria_results` (ideally the rich `{met, evidence_label}` shape, not just a bare bool -- a weak label on a criterion that demanded real evidence is caught here, not silently passed), and `authorization_violations` (empty list if none). See `execution-and-verification.md` for the full shape and the evidence-label taxonomy. Report exactly one of `PASS` / `PASS_WITH_CAVEATS` / `FAIL` / `INCOMPLETE` / `BLOCKED` -- never a bespoke phrase, and never `PASS` without every 'must' criterion having an actual, adequately-evidenced recorded result.
+where `<result-dir>/evidence.json` contains `hard_constraint_results`, `dimension_scores`, `acceptance_criteria_results` (ideally the rich `{met, evidence_label}` shape, not just a bare bool -- a weak label on a criterion that demanded real evidence is caught here, not silently passed), `authorization_violations` (empty list if none), and `unmapped_material_claims` (empty list if every material claim you made has a `status.claim_ledger` entry -- a non-empty list forces `INCOMPLETE`). See `execution-and-verification.md` for the full shape and the evidence-label taxonomy. Report exactly one of `PASS` / `PASS_WITH_CAVEATS` / `FAIL` / `INCOMPLETE` / `BLOCKED` -- never a bespoke phrase, and never `PASS` without every 'must' criterion having an actual, adequately-evidenced recorded result and every material claim at least mapped to a ledger entry.
 
 ## 10. Bounded revision
 

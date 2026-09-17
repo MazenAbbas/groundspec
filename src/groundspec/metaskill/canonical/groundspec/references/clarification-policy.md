@@ -32,6 +32,33 @@ A request to plan, scope, or write a PRD for a product or service is a specific,
 
 This list exists because a real test of this Skill defaulted every one of these for a food-delivery PRD without asking or recording them as open questions at all -- see the regression fixture referenced from this repo's test suite. It is a floor, not a ceiling: a different domain will have its own near-universally-material dimensions (see `domain-guidance/*.md`), and a request that already answers several of these doesn't need to re-ask them.
 
+## A specific instance of the general rule: an illustrative anchor is not a decision
+
+**"Geographic/market scope" above is a *shape* (one city vs. region vs. national). The *specific* choice within that shape -- which exact city, campus, or segment -- is a second, separate high-value item, and defaulting it is not the same thing as illustrating it.** A second live test asked for "one city near one university" but never named the city; the Skill silently picked a specific real city and a specific real university and wrote them into the PRD's scope as if the user had chosen them. That single silent substitution changed market size, applicable regulation, operational logistics, merchant supply, and the validation design the rest of the document built on -- it is not a low-impact formatting choice (see "Material-default policy" below), even though picking *some* concrete example to reason about is often useful.
+
+When the user has fixed the *shape* of a decision but not its specific value, do one of the following -- never silently pick a specific real instance and present it as decided:
+
+1. **Ask**, within the clarification budget, if the specific value is worth one question (it usually is, per the checklist above); or
+2. **Use an explicit, visibly-a-placeholder value**, such as `[Pilot city]` or `[Anchor university]`, everywhere the document would otherwise need a concrete name, and record the placeholder choice itself as a `high_value` open question (classification `high_value`, `resolution_status` "open" or "defaulted" with `default_applied` explaining that a placeholder was used rather than a real instance); or
+3. **Produce a clearly labeled comparison** across 2-3 plausible candidates if the request's scope genuinely calls for that framing, with each candidate's implications stated and no single one presented as chosen.
+
+If you do need a concrete example to make the rest of the document legible (e.g. to compute an illustrative TAM), label it as illustrative inline at first use ("using \[City X\] as an illustrative example -- not yet a confirmed launch decision") -- do not let it silently migrate into being treated as the actual, decided scope by the time the reader reaches the risk or acceptance-criteria sections.
+
+## Material-default policy: what "safe to default" actually means
+
+A default is safe only when changing it would not materially alter the requested outcome, research, risk analysis, or acceptance criteria. In Guided mode (and, to a lesser but nonzero degree, Quick mode -- see the budgets below), these are *normally* material and must not be silently defaulted without at least a recorded `high_value` open question:
+
+- launch country, city, or campus (the specific value, not just the shape -- see above);
+- business model (standalone vs. partnership/integration);
+- customer segment/persona;
+- legal entity or operating model;
+- monetization;
+- a regulated workflow (payments, health, safety, data handling);
+- target language, when it changes the addressable market;
+- whether the work is exploratory research or is intended to authorize a build/launch decision.
+
+Low-impact formatting, filename, and presentation choices (e.g. section ordering, whether to use a table or a bulleted list, which placeholder bracket style to use) may still be safely defaulted without a question or an open-question entry -- the test throughout this policy is always "would a wrong guess here materially change the deliverable," not "is this a decision at all."
+
 ## A high-value item must never silently disappear
 
 If the question budget doesn't allow asking a `high_value` item, it still gets an entry in `scope.open_questions` with `classification: "high_value"` and `resolution_status: "defaulted"`, with `default_applied` stating exactly what was assumed instead and why. **It does not get merged into `scope.assumptions`, because `scope.assumptions` is reserved for items that were genuinely safe to default (see below) -- a high-value item is, by definition, not one of those.** State these back to the user in plain language in your response, not just buried in the contract file: "I assumed X for now because Y; the biggest open question is Z" costs one sentence and prevents the user from mistaking a forced default under budget pressure for a considered, safe choice.

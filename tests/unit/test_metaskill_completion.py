@@ -1,6 +1,7 @@
 import pytest
 
 from groundspec.metaskill.completion import (
+    claim_ledger_has_disclosed_material_limitations,
     derive_completion_state,
     evaluate_acceptance_criteria,
     has_deferred_high_value_open_questions,
@@ -331,3 +332,107 @@ def test_deferred_high_value_items_do_not_escalate_past_fail():
         has_deferred_high_value_items=True,
     )
     assert state == "FAIL"
+
+
+# --- Regression hardening: material-claim ledger gates (Riyadh food-delivery
+#     PRD, v0.2.0rc2 -> v0.2.0rc3) ---
+
+
+def test_claim_ledger_has_disclosed_material_limitations_true_for_secondary_support():
+    ledger = [
+        {"evidence_label": "SECONDARY_SOURCE_SUPPORTED", "affects": ["legal_or_regulatory_feasibility"]}
+    ]
+    assert claim_ledger_has_disclosed_material_limitations(ledger) is True
+
+
+def test_claim_ledger_has_disclosed_material_limitations_true_for_research_needed():
+    ledger = [{"evidence_label": "RESEARCH_NEEDED", "affects": ["market_size"]}]
+    assert claim_ledger_has_disclosed_material_limitations(ledger) is True
+
+
+def test_claim_ledger_has_disclosed_material_limitations_false_for_strong_evidence():
+    ledger = [{"evidence_label": "PRIMARY_SOURCE_VERIFIED", "affects": ["legal_or_regulatory_feasibility"]}]
+    assert claim_ledger_has_disclosed_material_limitations(ledger) is False
+
+
+def test_claim_ledger_has_disclosed_material_limitations_false_when_claim_not_material():
+    # A weak label on a claim that doesn't affect any material dimension
+    # (empty 'affects') isn't the thing this gate cares about.
+    ledger = [{"evidence_label": "MODEL_EVALUATED", "affects": []}]
+    assert claim_ledger_has_disclosed_material_limitations(ledger) is False
+
+
+def test_claim_ledger_has_disclosed_material_limitations_false_when_empty():
+    assert claim_ledger_has_disclosed_material_limitations([]) is False
+
+
+def test_unmapped_material_claims_downgrade_pass_to_incomplete():
+    # A material claim (e.g. "university students have narrower budgets")
+    # with no status.claim_ledger entry at all is worse than a disclosed
+    # limitation -- it's not evidenced at any strength, so INCOMPLETE, not
+    # a caveated PASS.
+    state = derive_completion_state(
+        hard_constraints_passed=True,
+        has_unresolved_blocking_questions=False,
+        budget_expired=False,
+        acceptance_criteria_met=True,
+        has_unmapped_material_claims=True,
+    )
+    assert state == "INCOMPLETE"
+
+
+def test_unmapped_material_claims_beats_disclosed_limitations_and_deferred_items():
+    state = derive_completion_state(
+        hard_constraints_passed=True,
+        has_unresolved_blocking_questions=False,
+        budget_expired=False,
+        acceptance_criteria_met=True,
+        has_unmapped_material_claims=True,
+        has_disclosed_material_limitations=True,
+        has_deferred_high_value_items=True,
+    )
+    assert state == "INCOMPLETE"
+
+
+def test_disclosed_material_limitations_downgrade_pass_to_pass_with_caveats():
+    state = derive_completion_state(
+        hard_constraints_passed=True,
+        has_unresolved_blocking_questions=False,
+        budget_expired=False,
+        acceptance_criteria_met=True,
+        has_disclosed_material_limitations=True,
+    )
+    assert state == "PASS_WITH_CAVEATS"
+
+
+def test_no_material_claim_issues_allows_plain_pass():
+    state = derive_completion_state(
+        hard_constraints_passed=True,
+        has_unresolved_blocking_questions=False,
+        budget_expired=False,
+        acceptance_criteria_met=True,
+        has_unmapped_material_claims=False,
+        has_disclosed_material_limitations=False,
+    )
+    assert state == "PASS"
+
+
+def test_unmapped_material_claims_does_not_escalate_past_fail_or_blocked():
+    state_fail = derive_completion_state(
+        hard_constraints_passed=True,
+        has_unresolved_blocking_questions=False,
+        budget_expired=False,
+        acceptance_criteria_met=True,
+        authorization_boundary_violated=True,
+        has_unmapped_material_claims=True,
+    )
+    assert state_fail == "FAIL"
+
+    state_blocked = derive_completion_state(
+        hard_constraints_passed=True,
+        has_unresolved_blocking_questions=True,
+        budget_expired=False,
+        acceptance_criteria_met=True,
+        has_unmapped_material_claims=True,
+    )
+    assert state_blocked == "BLOCKED"

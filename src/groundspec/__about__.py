@@ -1,3 +1,3 @@
-__version__ = "0.2.0rc2"
-CONTRACT_SCHEMA_VERSION = "0.3.0"
+__version__ = "0.2.0rc3.dev0"
+CONTRACT_SCHEMA_VERSION = "0.4.0"
 RULE_PACK_SCHEMA_VERSION = "0.1.0"

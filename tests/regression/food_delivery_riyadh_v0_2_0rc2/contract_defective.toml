@@ -1,0 +1,56 @@
+contract_schema_version = "0.3.0"
+task_id = "ksa-food-delivery-riyadh-defective-run"
+[[acceptance.criteria]]
+description = "The VAT/regulatory section accurately reflects official ZATCA guidance"
+evidence_required = "the cited ZATCA rule was actually read and matches the claim as stated"
+id = "zatca-section-accurate"
+priority = "must"
+verification_method = "external_reference_check"
+[brief]
+context = ""
+goal = "Produce a PRD for a Riyadh university-student food-delivery pilot near King Saud University."
+inputs = []
+normalized_problem_statement = "University students in Riyadh have narrower discretionary budgets and more rigid daily schedules than the general population, and major food-delivery platforms do not specifically optimize for these needs."
+raw_user_brief = "Create a PRD for a university-student food-delivery application in Riyadh, piloting near King Saud University."
+target_users = ["Riyadh university students", "the founder deciding whether to pursue this"]
+[[brief.expected_deliverables]]
+description = "The PRD document"
+name = "prd"
+[budget]
+max_clarification_questions = 3
+max_execution_iterations = 20
+max_planning_iterations = 3
+research_depth = "shallow"
+reserved_verification_fraction = 0.15
+time_budget_minutes = 60
+tool_call_budget = 50
+[control]
+escalation_conditions = []
+stop_conditions = []
+[quality]
+hard_constraints = []
+soft_objectives = []
+[routing]
+domain_packs = []
+risk_level = "low"
+risk_overlays = ["informational"]
+[routing.authorization]
+boundaries = []
+granted_permissions = []
+requires_confirmation_for = []
+[scope]
+assumptions = []
+constraints = []
+non_goals = []
+open_questions = []
+[status]
+budget_expired = false
+completion_status = "not_started"
+omitted_work = []
+remaining_uncertainty = []
+residual_risks = []
+unverified_claims = []
+[[status.verified_facts]]
+evidence_label = "VERIFIED"
+source = "General knowledge of GCC e-commerce VAT trends; no specific document opened."
+statement = "All food-delivery marketplaces operating in Saudi Arabia are deemed suppliers under ZATCA rules and must issue every invoice themselves."

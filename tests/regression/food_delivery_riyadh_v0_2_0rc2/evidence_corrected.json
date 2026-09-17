@@ -1,0 +1,24 @@
+{
+  "acceptance_criteria_results": {
+    "material-claims-mapped-to-ledger": {
+      "evidence_label": "MEASURED",
+      "met": true
+    },
+    "no-secondary-source-presented-as-primary": {
+      "evidence_label": "MEASURED",
+      "met": true
+    },
+    "pilot-city-confirmed-not-assumed": {
+      "evidence_label": "VERIFIED",
+      "met": true
+    },
+    "regulatory-claims-preserve-conditions": {
+      "evidence_label": "MODEL-EVALUATED",
+      "met": true
+    }
+  },
+  "authorization_violations": [],
+  "dimension_scores": {},
+  "hard_constraint_results": {},
+  "unmapped_material_claims": []
+}

@@ -20,6 +20,15 @@ risk = "..."                    # NOT "description"
 severity = "critical"           # low / medium / high / critical
 mitigation = "..."               # optional
 affects_deliverable_validity = false  # optional, defaults true -- see below
+
+[[status.claim_ledger]]          # new in contract schema 0.4.0 -- see "The claim ledger" below
+claim_id = "..."
+claim = "..."
+evidence_label = "RESEARCH_NEEDED"  # MEASURED / PRIMARY_SOURCE_VERIFIED / SECONDARY_SOURCE_SUPPORTED /
+                                     # USER_CONFIRMED / MODEL_EVALUATED / ASSUMPTION / RESEARCH_NEEDED
+evaluator_type = "ai_model"          # deterministic_tool / human_reviewer / ai_model / user
+scope_and_qualifiers = "..."         # required; conditions/exceptions preserved, or "none" if truly unconditional
+affects = ["market_size"]            # optional; which material dimension(s) this claim affects
 ```
 
 If you'd rather avoid the TOML array-of-tables ordering footgun below entirely, inline-table array syntax is equally valid and schema-identical: `status.verified_facts = [{statement = "...", evidence_label = "VERIFIED"}]`. Both forms produce the same JSON; use whichever is easier for your editing tool to get right.
@@ -33,7 +42,8 @@ If you'd rather avoid the TOML array-of-tables ordering footgun below entirely, 
   "acceptance_criteria_results": {
     "<criterion-id>": {"met": true, "evidence_label": "SOURCE_VERIFIED"}
   },
-  "authorization_violations": []
+  "authorization_violations": [],
+  "unmapped_material_claims": []
 }
 ```
 
@@ -42,6 +52,7 @@ If you'd rather avoid the TOML array-of-tables ordering footgun below entirely, 
 - `acceptance_criteria_results`: for each `acceptance.criteria` entry (at minimum, every `must`-priority one), either a plain `true`/`false` (legacy shape, still supported), or -- preferred -- `{"met": bool, "evidence_label": "<label>"}` so the evaluator can check the label matches the strength the criterion's own `verification_method` actually requires (see "Evidence taxonomy" below). Missing a `must` criterion here produces `INCOMPLETE`.
   **Which verification methods demand real evidence, and which accept a self-review:** `automated_test`, `reproducible_command`, `static_analysis`, and `external_reference_check` all demand real, independent evidence -- a weak label (`MODEL-EVALUATED`/`PROPOSED`/`ASSUMPTION`/`RESEARCH_NEEDED`) on one of these produces `INCOMPLETE`, not a silent `PASS` (see `test_model_evaluated_label_is_inadequate_for_automated_test_criterion`). `manual_inspection` and `user_confirmation`, by contrast, are *defined* as judgment-based -- a `MODEL-EVALUATED` label is the expected, adequate evidence for a `manual_inspection` criterion (it is what "the executor inspected and judged it" actually means), and this is treated as adequate, not weak. Two independent forward tests both had to infer this distinction because it wasn't spelled out before; do not assume `manual_inspection` demands the same evidence strength as `automated_test`.
 - `authorization_violations`: a list of plain-language descriptions of anything done that the contract's `routing.authorization` didn't actually permit. Empty list if none. Any non-empty list forces `FAIL` regardless of everything else -- see "Authorization" below.
+- `unmapped_material_claims` (new): a list of plain-language descriptions of material factual claims that appear in the deliverable but have **no** corresponding entry in `status.claim_ledger` -- see "The claim ledger" below. Empty list if every material claim you made has a ledger entry. Any non-empty list forces `INCOMPLETE` -- you don't get to assert a market-size number, a competitor-capability claim, or a regulatory conclusion with no evidence record behind it at all and still call the result done, even provisionally.
 
 ## Evidence taxonomy -- use the right label, every time
 
@@ -70,6 +81,49 @@ If you'd rather avoid the TOML array-of-tables ordering footgun below entirely, 
 
 If you're unsure whether something is `VERIFIED`/`SOURCE_VERIFIED` or `MODEL-EVALUATED`, ask yourself: *did I actually open, run, or read the specific thing, or did I reason about it / see a summary of it?* The former is verified; the latter is model-evaluated, full stop, regardless of how confident the reasoning is.
 
+## The claim ledger -- provenance for material factual claims (contract schema 0.4.0+)
+
+`status.verified_facts`/`status.unverified_claims` (above) are short status-report lines. `status.claim_ledger` is different: it is the citable, reproducible evidence record behind a **material factual claim** -- one that affects the problem definition, market size, legal/regulatory feasibility, financial feasibility, risk severity, product scope, an acceptance threshold, or a go/no-go recommendation. A live test produced a PRD whose problem statement ("university students have narrower budgets and more rigid schedules than other segments, and major platforms don't optimize for this") and a market-size/competitor-capability claim were asserted with no evidence record of any kind, and reported `PASS` anyway -- this is what closes that gap.
+
+**When a claim is material, it needs a `status.claim_ledger` entry before you report an unconditional `PASS`.** Purely stylistic or connective prose does not; don't try to classify every sentence. If you assert something that would change the reader's problem definition, their sense of market size, whether the plan is legally/financially feasible, how severe a risk is, what's in scope, an acceptance threshold, or a go/no-go call -- that assertion needs a ledger entry. A material claim with no entry goes into `evidence.json`'s `unmapped_material_claims` and forces `INCOMPLETE` (see above); no need to hunt for the last unlabeled adjective, but don't skip an entry just because writing it is friction.
+
+```toml
+[[status.claim_ledger]]
+claim_id = "student-budget-narrower"
+claim = "University students in the target market have narrower discretionary budgets than the general population"
+evidence_label = "RESEARCH_NEEDED"      # see the label table below
+evaluator_type = "ai_model"
+scope_and_qualifiers = "Directional claim only; no specific figures asserted. Not verified against local survey/spending data."
+affects = ["problem_definition"]
+# source_url / source_title / access_date / excerpt_or_locator / source_type / authority_level /
+# limitations are all optional here -- they become REQUIRED (schema-enforced) only for
+# PRIMARY_SOURCE_VERIFIED / SECONDARY_SOURCE_SUPPORTED, see below.
+```
+
+**The seven claim-ledger evidence labels** (a different, more granular enum than `verified_facts`/`unverified_claims` above -- this one carries full source provenance):
+
+| Label | Use when | Citation required? |
+|---|---|---|
+| `MEASURED` | A concrete local/deterministic measurement (a count, a size, a timing). | No -- `authority_level` is schema-forced to `not_applicable`. |
+| `PRIMARY_SOURCE_VERIFIED` | You actually opened an official/primary source (government body, statute, official regulation or guidance, primary document) and it directly supports this exact claim, including its qualifiers. | Yes -- `source_url`, `source_title`, `access_date`, `excerpt_or_locator`, `source_type` are all schema-required, and `authority_level` is schema-forced to `primary_official`. |
+| `SECONDARY_SOURCE_SUPPORTED` | You actually opened a professional advisory article, reputable news report, market report, or academic paper and it supports the claim, offered as context/provisional support only -- never as final legal/regulatory/financial confirmation. | Yes -- same four citation fields required, and `authority_level` is schema-forced to `secondary_professional` or `secondary_general` (never `primary_official` -- this is what makes "secondary source presented as authoritative" a schema violation, not a style note). If `affects` includes `legal_or_regulatory_feasibility`, `limitations` is also schema-required and must actually say official confirmation is still needed. |
+| `USER_CONFIRMED` | The user explicitly confirmed this themselves. | No. |
+| `MODEL_EVALUATED` | Your own judgment/self-review. Never promotable to a stronger label by restating it more confidently. | No -- `authority_level` forced to `not_applicable`. |
+| `ASSUMPTION` | A recorded, stated assumption -- not evidence. | No. |
+| `RESEARCH_NEEDED` | A bounded search found no suitable source. State the search's actual scope; never that no source exists. | No. |
+
+**A search-result snippet, an index page, an inaccessible paper, or a report you did not open is never `PRIMARY_SOURCE_VERIFIED` or `SECONDARY_SOURCE_SUPPORTED`** -- if you have not opened and read the specific passage, the honest label is `RESEARCH_NEEDED` or `MODEL_EVALUATED`, exactly as for `SOURCE_VERIFIED` above.
+
+**For legal, regulatory, tax, financial, medical, safety, and compliance claims specifically:** prefer the responsible government body, regulator, statute, official regulation, or official guidance (`PRIMARY_SOURCE_VERIFIED`). A professional advisory article or reputable news report may be recorded as `SECONDARY_SOURCE_SUPPORTED`, with its lower authority disclosed via `authority_level` and its limitation stated explicitly -- do not reject secondary sources outright; their role is provisional context, not final confirmation, and the schema requires you to say so via `limitations` rather than silently upgrade them. Never invent a legal conclusion by generalizing from an adjacent regulation you didn't actually check.
+
+**Conditional claims must keep their conditions.** If a source states a rule with exceptions, jurisdiction limits, dates, thresholds, or supplier/scope categories, `scope_and_qualifiers` must actually restate them -- not "none" when the source clearly says "unless X." A real example: Saudi ZATCA's e-marketplace VAT deemed-supplier treatment is conditional (it turns on the underlying supplier's residency and VAT-registration status, among other things). "All food-delivery marketplaces are deemed suppliers and must issue every invoice" rewrites a conditional rule as a universal one and is unacceptable, even as a `MODEL_EVALUATED` claim. "Deemed-supplier treatment may apply to this marketplace model in certain supplier scenarios (e.g. a resident, non-VAT-registered supplier); no primary ZATCA document was inspected, so professional/official confirmation for this exact operating model is still needed" is the acceptable shape -- qualifiers preserved, authority level disclosed, limitation stated. The schema cannot detect a generalized conditional rule from prose alone (`scope_and_qualifiers` is a free-text field); this is a discipline this Skill must apply itself, not something `groundspec validate` can catch for you.
+
+**Model-generated thresholds are not sourced benchmarks.** A suggested conversion target, retention target, survey threshold, or sample size you derived yourself is `MODEL_EVALUATED` (or `ASSUMPTION` if it's a stated starting point), never `SECONDARY_SOURCE_SUPPORTED`, even if it resembles a number you've seen in industry contexts. Present it in the deliverable in a way that cannot be mistaken for a sourced figure (e.g. "target -- not benchmarked against an external source").
+
+**Direct citations, not citations to a search:** for any `PRIMARY_SOURCE_VERIFIED`/`SECONDARY_SOURCE_SUPPORTED` claim, the deliverable itself should give the reader a usable citation: title, publisher, direct URL, access date, evidence class, and the relevant excerpt or section/page locator -- never a citation to a search-results page. Never put secrets, tokens, private URLs, local absolute paths, or personal browsing history into `source_url` or anywhere else in the ledger.
+
+**Presentation:** when you write the actual deliverable (not just the contract), visually distinguish primary-official evidence, secondary support, user decisions, assumptions, model-evaluated recommendations, and research-needed items from each other -- a reader should never have to open the contract to tell a sourced fact from a model guess.
+
 ## Structural checks are not semantic proof
 
 A count, a grep, a "found N rows" -- these prove a file exists, a minimum number of rows exists, or an expected identifier is present. **They do not prove** that a threshold is actually measurable, that a cited source supports the specific claim attached to it, that reasoning is correct, that every risk is properly categorized, or that a label was applied accurately to the row it's attached to. If an acceptance criterion's `evidence_required` describes a semantic property (e.g. "every row has a valid metric and threshold"), a row-count check does not satisfy it -- you must actually inspect the rows (or a representative, disclosed sample of them) and say so, or label the criterion's result honestly as unmet/incomplete rather than passing it on a count alone.
@@ -89,9 +143,9 @@ Completion state: PASS
 
 - **`BLOCKED`** -- a `blocking`-classified open question is still unresolved. Nothing below matters until it's answered.
 - **`FAIL`** -- any of: an explicit authorization boundary was violated (`authorization_violations` non-empty); a hard constraint that applied did not hold; a `must` acceptance criterion was checked and failed; or an unresolved residual risk is both `severity: critical` and marked (or defaulted -- see below) as affecting the deliverable's own validity.
-- **`INCOMPLETE`** -- at least one `must` acceptance criterion has no recorded result, *or* has only a weak evidence label (`MODEL-EVALUATED`/`PROPOSED`/`ASSUMPTION`/`RESEARCH_NEEDED`) where its own `verification_method` demanded real evidence. This is deliberately distinct from `FAIL`: it means "not enough evidence to say," not "verified wrong."
-- **`PASS_WITH_CAVEATS`** -- every gate above cleared, but either `status.budget_expired` is true, or at least one `high_value` open question was resolved by defaulting rather than by the user actually answering it. Time pressure is a standing reason to distrust unexplored edge cases even when everything actually checked came back clean; an unconfirmed material judgment call is a standing reason to distrust whether the deliverable matches actual intent, even when everything you *did* check came back clean. Note this applies even to a `high_value` item you disclosed responsibly with a stated default -- doing that is still the correct thing to do (see `clarification-policy.md`), it just means the honest completion state is "passed, with caveats," not a bare "passed."
-- **`PASS`** -- every gate above cleared and the budget wasn't exhausted.
+- **`INCOMPLETE`** -- at least one `must` acceptance criterion has no recorded result, *or* has only a weak evidence label (`MODEL-EVALUATED`/`PROPOSED`/`ASSUMPTION`/`RESEARCH_NEEDED`) where its own `verification_method` demanded real evidence, *or* `evidence.json`'s `unmapped_material_claims` is non-empty (a material factual claim with no `status.claim_ledger` entry at all -- see "The claim ledger" above). This is deliberately distinct from `FAIL`: it means "not enough evidence to say," not "verified wrong."
+- **`PASS_WITH_CAVEATS`** -- every gate above cleared, but at least one of: `status.budget_expired` is true; at least one `high_value` open question was resolved by defaulting rather than by the user actually answering it; or at least one material claim in `status.claim_ledger` rests on disclosed secondary support, model judgment, a stated assumption, or a bounded research gap rather than strong evidence (`MEASURED`/`PRIMARY_SOURCE_VERIFIED`/`USER_CONFIRMED`) -- see `claim_ledger_has_disclosed_material_limitations`. Time pressure, an unconfirmed material judgment call, and an under-evidenced material claim are all standing reasons to distrust whether the deliverable fully matches actual intent, even when everything you *did* check came back clean. Note this applies even to items you disclosed responsibly (a stated default, a properly-labeled and properly-qualified secondary source) -- doing that is still the correct thing to do (see `clarification-policy.md` and "The claim ledger" above), it just means the honest completion state is "passed, with caveats," not a bare "passed."
+- **`PASS`** -- every gate above cleared, the budget wasn't exhausted, and every material claim is backed by strong evidence with no disclosed limitation.
 
 Soft-objective scores (`dimension_scores`) never change this state -- they're an improvable quality signal reported alongside it, never a gate (same principle as the deterministic engine's hard-constraint-beats-soft-score rule).
 
@@ -126,4 +180,4 @@ For everything else not explicitly stated by the user: if the contract's `routin
 
 ## Reporting
 
-The final report states, at minimum: the completion state, which acceptance criteria were verified and how (with their evidence labels), which assumptions were made and why they were judged safe to default (never an assumption that wasn't actually safe -- see `clarification-policy.md`), what remains uncertain, and any residual risk (with whether it affects this deliverable's validity). Use the evidence labels defined above -- never a stronger label than the evidence actually supports, and never `MODEL-EVALUATED`/`ASSUMPTION`/`RESEARCH_NEEDED`/`PROPOSED`/`PENDING_EXTERNAL_VALIDATION`/`OUT_OF_SCOPE` on anything reported as a verified fact. Do not persist chain-of-thought reasoning anywhere in the contract or the report; persist only the decisions, assumptions, evidence references, completion state, and the user-visible rationale for each.
+The final report states, at minimum: the completion state, which acceptance criteria were verified and how (with their evidence labels), which assumptions were made and why they were judged safe to default (never an assumption that wasn't actually safe -- see `clarification-policy.md`), what remains uncertain, any residual risk (with whether it affects this deliverable's validity), and every material claim's ledger entry (with its evidence label and authority level, where applicable). Use the evidence labels defined above -- never a stronger label than the evidence actually supports, and never `MODEL-EVALUATED`/`ASSUMPTION`/`RESEARCH_NEEDED`/`PROPOSED`/`PENDING_EXTERNAL_VALIDATION`/`OUT_OF_SCOPE` on anything reported as a verified fact, and never `PRIMARY_SOURCE_VERIFIED`/`SECONDARY_SOURCE_SUPPORTED` on a claim-ledger entry whose source you didn't actually open and read. Do not persist chain-of-thought reasoning anywhere in the contract or the report; persist only the decisions, assumptions, evidence references, completion state, and the user-visible rationale for each.

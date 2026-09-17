@@ -1,12 +1,12 @@
 # Task Contract schema reference
 
-Three schema versions currently ship and are all fully supported: [`0.1.0`](../src/groundspec/schema/task_contract.v0_1_0.schema.json), [`0.2.0`](../src/groundspec/schema/task_contract.v0_2_0.schema.json), and [`0.3.0`](../src/groundspec/schema/task_contract.v0_3_0.schema.json) (JSON Schema, draft 2020-12) -- see [architecture.md](architecture.md#schema-versioning-and-migration-strategy) for exactly what changed at each step and why. `groundspec create` and `contract.factory.new_contract` default to `0.3.0`; `0.1.0` and `0.2.0` documents keep validating as-is, forever. Every object in all three schemas sets `additionalProperties: false`, so an unknown key is always a validation error, never silently ignored. No field anywhere accepts arbitrary code.
+Four schema versions currently ship and are all fully supported: [`0.1.0`](../src/groundspec/schema/task_contract.v0_1_0.schema.json), [`0.2.0`](../src/groundspec/schema/task_contract.v0_2_0.schema.json), [`0.3.0`](../src/groundspec/schema/task_contract.v0_3_0.schema.json), and [`0.4.0`](../src/groundspec/schema/task_contract.v0_4_0.schema.json) (JSON Schema, draft 2020-12) -- see [architecture.md](architecture.md#schema-versioning-and-migration-strategy) for exactly what changed at each step and why. `groundspec create` and `contract.factory.new_contract` default to `0.4.0`; `0.1.0`, `0.2.0`, and `0.3.0` documents keep validating as-is, forever. Every object in all four schemas sets `additionalProperties: false`, so an unknown key is always a validation error, never silently ignored. No field anywhere accepts arbitrary code.
 
 ## Top level
 
 | Field | Type | Notes |
 |---|---|---|
-| `contract_schema_version` | `"0.1.0"`, `"0.2.0"`, or `"0.3.0"` (const per schema file) | Never silently upgraded; see [architecture.md](architecture.md#schema-versioning-and-migration-strategy). |
+| `contract_schema_version` | `"0.1.0"`, `"0.2.0"`, `"0.3.0"`, or `"0.4.0"` (const per schema file) | Never silently upgraded; see [architecture.md](architecture.md#schema-versioning-and-migration-strategy). |
 | `task_id` | string, `^[a-z0-9][a-z0-9-]{2,63}$` | A slug, not a UUID -- meant to be legible in filenames and logs. |
 | `brief` | object | See below. |
 | `scope` | object | See below. |
@@ -91,6 +91,26 @@ Three schema versions currently ship and are all fully supported: [`0.1.0`](../s
 | `residual_risks` | array of `{risk, severity, mitigation, affects_deliverable_validity?}` | `affects_deliverable_validity` is new in `0.3.0`, defaults `true`. `groundspec.metaskill.completion.derive_completion_state` treats a `severity: critical` risk with this field true (or absent) as blocking `PASS`; explicitly setting it `false` documents that the risk is itself a legitimate finding the task was asked to produce, not a defect in the deliverable. |
 | `omitted_work` | array of strings | What graceful degradation cut. |
 | `budget_expired` | bool | |
+| `claim_ledger` | array of `claim_record` (see below) | New, optional, defaults `[]`, in `0.4.0`. Absent in `0.1.0`-`0.3.0`. |
+
+### `claim_record` (schema `0.4.0`+)
+
+Structured provenance for a **material factual claim** -- see [architecture.md](architecture.md#material-claim-policy).
+
+| Field | Type | Notes |
+|---|---|---|
+| `claim_id` | string, slug pattern | Stable, unique within the ledger. |
+| `claim` | string | The exact or concisely normalized claim. |
+| `evidence_label` | enum: `MEASURED\|PRIMARY_SOURCE_VERIFIED\|SECONDARY_SOURCE_SUPPORTED\|USER_CONFIRMED\|MODEL_EVALUATED\|ASSUMPTION\|RESEARCH_NEEDED` | A separate, more granular taxonomy than `verified_facts`/`unverified_claims` above -- this one carries full source provenance. |
+| `source_type` | enum, default `not_applicable` | `government_body\|statute_or_regulation\|official_guidance\|primary_document\|professional_advisory\|news_report\|market_report\|academic_paper\|internal_measurement\|user_statement\|model_judgment\|not_applicable`. |
+| `authority_level` | enum, default `not_applicable` | `primary_official\|secondary_professional\|secondary_general\|unofficial\|not_applicable`. Schema-constrained by `evidence_label` -- see below. |
+| `source_url`, `source_title`, `publisher`, `publication_date`, `access_date`, `excerpt_or_locator` | strings, all default `""` | Direct-citation fields; required (non-empty) only when `evidence_label` is `PRIMARY_SOURCE_VERIFIED` or `SECONDARY_SOURCE_SUPPORTED`. |
+| `scope_and_qualifiers` | string, required | Every condition/exception/jurisdiction/date/threshold the source states, or an explicit "none, unconditional" statement. Free text -- not schema-checkable against the actual source content. |
+| `evaluator_type` | enum, required | `deterministic_tool\|human_reviewer\|ai_model\|user`. |
+| `limitations` | string, default `""` | What the evidence does NOT establish; required (non-empty) when `evidence_label` is `SECONDARY_SOURCE_SUPPORTED` and `affects` includes `legal_or_regulatory_feasibility`. |
+| `affects` | array of enum, default `[]` | Which material dimension(s) this claim affects: `problem_definition\|market_size\|legal_or_regulatory_feasibility\|financial_feasibility\|risk_severity\|product_scope\|acceptance_thresholds\|go_no_go_recommendation`. Empty means non-material. |
+
+Schema-enforced `evidence_label`/`authority_level` pairing (this is what makes "secondary source presented as authoritative" a validation error rather than a style note): `PRIMARY_SOURCE_VERIFIED` forces `authority_level: primary_official`; `SECONDARY_SOURCE_SUPPORTED` forces `authority_level` to `secondary_professional` or `secondary_general` (never `primary_official`); `MEASURED`/`USER_CONFIRMED`/`MODEL_EVALUATED`/`ASSUMPTION`/`RESEARCH_NEEDED` force `authority_level: not_applicable`.
 
 ## JSON / TOML round-trip
 

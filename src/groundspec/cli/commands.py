@@ -23,6 +23,7 @@ from groundspec.contract.validator import SchemaValidationError, validate_contra
 from groundspec.metaskill.claude_export import render_claude_meta_skill
 from groundspec.metaskill.codex_export import render_codex_meta_skill
 from groundspec.metaskill.completion import (
+    claim_ledger_has_disclosed_material_limitations,
     derive_completion_state,
     evaluate_acceptance_criteria,
     has_deferred_high_value_open_questions,
@@ -323,6 +324,10 @@ def cmd_evaluate(args: object) -> int:
         assert isinstance(residual_risks, list)
         authorization_violations = evidence.get("authorization_violations", [])
         deferred_high_value = has_deferred_high_value_open_questions(open_questions)
+        claim_ledger = status.get("claim_ledger", [])
+        assert isinstance(claim_ledger, list)
+        unmapped_material_claims = evidence.get("unmapped_material_claims", [])
+        disclosed_material_limitations = claim_ledger_has_disclosed_material_limitations(claim_ledger)
         state = derive_completion_state(
             hard_constraints_passed=result.hard_constraints_passed,
             has_unresolved_blocking_questions=has_blocking,
@@ -331,11 +336,19 @@ def cmd_evaluate(args: object) -> int:
             authorization_boundary_violated=bool(authorization_violations),
             unresolved_critical_risk_to_validity=residual_risk_blocks_completion(residual_risks),
             has_deferred_high_value_items=deferred_high_value,
+            has_unmapped_material_claims=bool(unmapped_material_claims),
+            has_disclosed_material_limitations=disclosed_material_limitations,
         )
         print(f"Completion state: {state}")
         if deferred_high_value:
             print("  note: at least one high-value clarification item was deferred/defaulted "
                   "rather than confirmed by the user")
+        if disclosed_material_limitations:
+            print("  note: at least one material claim in status.claim_ledger rests on disclosed "
+                  "secondary support, model judgment, an assumption, or a bounded research gap")
+        if unmapped_material_claims:
+            print(f"{FAIL} material claim(s) with no status.claim_ledger entry: "
+                  f"{'; '.join(unmapped_material_claims)}")
         if authorization_violations:
             print(f"{FAIL} authorization boundary violated: {'; '.join(authorization_violations)}")
         if acceptance_eval.missing_evidence_ids:
