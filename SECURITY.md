@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Groundspec is pre-release (v0.1.0rc1). Only the latest prerelease is supported; there is no long-term-support branch yet.
+Groundspec is pre-release. Only the latest prerelease is supported; there is no long-term-support branch yet.
 
 ## Reporting a vulnerability
 
