@@ -10,6 +10,8 @@ Don't restate the rule packs' contents here -- read them with `groundspec pack v
 
 A request can span more than one (e.g. "build a feature and announce it" is `software` + `content`). If none obviously fit, it's fine to select none -- `core-invariants` and the selected risk overlays still apply on their own.
 
+**Only select a domain pack whose rules actually fit the request's own goal, not just its subject matter.** `domain-research`'s hard constraints are written for a task whose `brief.goal` *is* an answerable research question -- selecting `research` for a task that only *needs some supporting research* (e.g. a PRD that would benefit from market data) pulls in a rule like "the research question is stated explicitly and is answerable" that doesn't fit the actual goal, and `groundspec audit` will list it as an applicable hard constraint you now have to somehow satisfy or explain. Two independent forward tests hit exactly this with a PRD-scoping task: one removed the `research` pack after seeing the mismatch in `audit`'s output; the other kept it and had to explicitly note the mismatch and its own judgment call rather than silently forcing a fit. Prefer the first approach -- if a selected pack's rules don't fit the actual goal, remove the pack rather than reinterpreting the goal or the rule to make them match. If research is genuinely a supporting need rather than the goal itself, that's better handled by actually doing (or explicitly deferring, per `RESEARCH_NEEDED`) the research within whatever domain pack does fit, not by adding `research` for its own sake.
+
 ## Risk overlays (`--risk-overlay`, one or more; always include at least one)
 
 | Overlay | Select when the request involves |

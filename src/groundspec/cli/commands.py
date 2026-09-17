@@ -22,7 +22,12 @@ from groundspec.contract.serialization import UnknownFileFormat, dump_document, 
 from groundspec.contract.validator import SchemaValidationError, validate_contract_dict
 from groundspec.metaskill.claude_export import render_claude_meta_skill
 from groundspec.metaskill.codex_export import render_codex_meta_skill
-from groundspec.metaskill.completion import derive_completion_state, evaluate_acceptance_criteria
+from groundspec.metaskill.completion import (
+    derive_completion_state,
+    evaluate_acceptance_criteria,
+    has_deferred_high_value_open_questions,
+    residual_risk_blocks_completion,
+)
 from groundspec.metaskill.export import (
     DestinationExists,
     ExportError,
@@ -314,15 +319,30 @@ def cmd_evaluate(args: object) -> int:
         has_blocking = any(
             q["classification"] == "blocking" and q["resolution_status"] == "open" for q in open_questions
         )
+        residual_risks = status["residual_risks"]
+        assert isinstance(residual_risks, list)
+        authorization_violations = evidence.get("authorization_violations", [])
+        deferred_high_value = has_deferred_high_value_open_questions(open_questions)
         state = derive_completion_state(
             hard_constraints_passed=result.hard_constraints_passed,
             has_unresolved_blocking_questions=has_blocking,
             budget_expired=bool(status.get("budget_expired", False)),
             acceptance_criteria_met=acceptance_eval.must_criteria_met,
+            authorization_boundary_violated=bool(authorization_violations),
+            unresolved_critical_risk_to_validity=residual_risk_blocks_completion(residual_risks),
+            has_deferred_high_value_items=deferred_high_value,
         )
         print(f"Completion state: {state}")
+        if deferred_high_value:
+            print("  note: at least one high-value clarification item was deferred/defaulted "
+                  "rather than confirmed by the user")
+        if authorization_violations:
+            print(f"{FAIL} authorization boundary violated: {'; '.join(authorization_violations)}")
         if acceptance_eval.missing_evidence_ids:
             print(f"  missing evidence for: {', '.join(acceptance_eval.missing_evidence_ids)}")
+        if acceptance_eval.inadequate_evidence_ids:
+            print(f"  inadequate evidence (weak label for a strong-evidence criterion): "
+                  f"{', '.join(acceptance_eval.inadequate_evidence_ids)}")
         if acceptance_eval.unmet_must_ids:
             print(f"  unmet 'must' criteria: {', '.join(acceptance_eval.unmet_must_ids)}")
         return 0 if state in ("PASS", "PASS_WITH_CAVEATS") else 1

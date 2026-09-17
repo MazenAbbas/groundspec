@@ -1,0 +1,113 @@
+contract_schema_version = "0.3.0"
+task_id = "ksa-food-delivery-corrected-run"
+[[acceptance.criteria]]
+description = "The PRD states an explicit, non-ambiguous pilot geographic scope"
+evidence_required = "the scope section names a specific campus/city, not a vague range"
+id = "pilot-scope-explicit"
+priority = "must"
+verification_method = "manual_inspection"
+[[acceptance.criteria]]
+description = "At least 3 highest-risk assumptions are explicitly identified and ranked"
+evidence_required = "the PRD's risk section lists and orders them"
+id = "highest-risk-assumptions-ranked"
+priority = "must"
+verification_method = "manual_inspection"
+[[acceptance.criteria]]
+description = "No network-capable tool call was made during this session"
+evidence_required = "the session's own tool-call log shows zero network-capable calls"
+id = "no-unauthorized-network-access"
+priority = "must"
+verification_method = "automated_test"
+[[acceptance.criteria]]
+description = "Every claim uses the correct evidence label (no self-review recorded as verified)"
+evidence_required = "status.verified_facts contains only genuinely-verified entries; anything else is in status.unverified_claims with an honest evidence_label"
+id = "evidence-correctly-labeled"
+priority = "must"
+verification_method = "manual_inspection"
+[brief]
+context = ""
+goal = "Produce a first-draft PRD for a Saudi university-student food-delivery concept, with verified facts, assumptions, and external-research gaps kept explicitly distinct, and no external/network action taken."
+inputs = []
+normalized_problem_statement = "No PRD exists yet for this concept, and several materially outcome-changing product decisions (scope, business model, research authorization) are unresolved."
+raw_user_brief = "Use Groundspec in Guided mode to create a PRD for a Saudi university-student food-delivery application. Clearly separate verified facts, assumptions, and items requiring external research. Do not publish anything or perform any external action."
+target_users = ["Saudi university students", "the founder deciding whether to pursue this"]
+[[brief.expected_deliverables]]
+description = "The PRD document"
+name = "prd"
+[budget]
+max_clarification_questions = 3
+max_execution_iterations = 20
+max_planning_iterations = 3
+research_depth = "none"
+reserved_verification_fraction = 0.15
+time_budget_minutes = 60
+tool_call_budget = 50
+[control]
+escalation_conditions = []
+stop_conditions = []
+[quality]
+hard_constraints = []
+soft_objectives = []
+[routing]
+risk_level = "medium"
+risk_overlays = ["informational"]
+[routing.authorization]
+boundaries = ["No external action of any kind for this task: no network access, no web search or fetch, no publishing, no messages -- verbatim from the user's own request, recorded here unedited."]
+granted_permissions = []
+requires_confirmation_for = ["any network access", "any publishing action"]
+[[routing.domain_packs]]
+pack_id = "software"
+version = "0.1.0"
+[[routing.domain_packs]]
+pack_id = "research"
+version = "0.1.0"
+[scope]
+assumptions = []
+constraints = []
+non_goals = ["Performing any network research this session (explicitly prohibited by the user)", "A finished, launch-ready PRD -- this is a first draft with explicit open questions"]
+[[scope.open_questions]]
+answer = "(a) a specific, if early-stage, launch-oriented PRD, not pure exploration; (b) single-campus pilot; (c) standalone marketplace for this draft's scope, with partnership noted as an alternative worth researching later; (d) no external research authorized -- work entirely from locally available reasoning."
+classification = "blocking"
+question = "Before scoping the PRD: (a) is this a research-only concept exploration or a specific launch plan; (b) single-campus vs. city-wide vs. national scope; (c) standalone marketplace vs. university/merchant partnership; (d) is external web research authorized for this session? (one compact question covering the most material choices, per the Skill's clarification policy)"
+resolution_status = "answered"
+[[scope.open_questions]]
+classification = "high_value"
+default_applied = "Assumed the general undergraduate population rather than a narrower subsegment (e.g. dorm-only residents) -- deferred under the clarification-question budget, recorded here rather than silently folded into an assumption."
+question = "Target persona/segment within the student population?"
+resolution_status = "defaulted"
+[[scope.open_questions]]
+classification = "high_value"
+default_applied = "Assumed card + a local digital wallet as the primary methods, with cash-on-delivery flagged as needing validation before commit -- deferred under budget, not asked."
+question = "Payment methods to support at launch?"
+resolution_status = "defaulted"
+[[scope.open_questions]]
+classification = "high_value"
+default_applied = "Assumed Arabic-first with English support, deferred under budget."
+question = "Primary language/localization for the product?"
+resolution_status = "defaulted"
+[[scope.open_questions]]
+classification = "high_value"
+question = "Monetization model (commission, subscription, delivery fee, or a mix)?"
+resolution_status = "open"
+[status]
+budget_expired = false
+completion_status = "partial"
+omitted_work = []
+remaining_uncertainty = ["Business model (standalone vs. partnership), monetization model, and three deferred high-value questions remain open -- see scope.open_questions."]
+[[status.residual_risks]]
+affects_deliverable_validity = false
+mitigation = "Explicitly flagged as the top research priority before this PRD is used for a build decision."
+risk = "The payment-method assumption (card/wallet over cash-on-delivery) is unverified; if wrong, the checkout section of this PRD would need significant rework."
+severity = "critical"
+[[status.unverified_claims]]
+evidence_label = "RESEARCH_NEEDED"
+reason = "External research was not authorized for this session, so this remains an open question pending a future, explicitly-authorized research pass."
+statement = "Whether Saudi university students predominantly prefer card/wallet payment over cash-on-delivery for food delivery."
+[[status.unverified_claims]]
+evidence_label = "ASSUMPTION"
+reason = "Recorded as assumptions/deferred open questions; restated here for the report."
+statement = "Single-campus pilot scope, undergraduate-general persona, and the payment/language/monetization defaults above."
+[[status.verified_facts]]
+evidence_label = "VERIFIED"
+source = "Direct inspection of the conversation and this session's own tool-call log."
+statement = "The request text and no other materials were available; no external source was consulted, per the user's explicit prohibition."
