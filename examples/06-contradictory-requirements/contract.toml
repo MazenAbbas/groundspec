@@ -1,0 +1,56 @@
+contract_schema_version = "0.1.0"
+task_id = "contradictory-brief-summary"
+[acceptance]
+criteria = []
+[brief]
+context = ""
+goal = "Produce a summary that resolves the length-vs-completeness contradiction explicitly."
+inputs = []
+normalized_problem_statement = "The brief asks for both a one-paragraph summary and full detail on 12 findings, which cannot both be satisfied literally."
+raw_user_brief = "write a one-paragraph summary of the report, but make sure to cover all 12 findings in full detail"
+target_users = ["the report's original requester"]
+[[brief.expected_deliverables]]
+description = "The resolved summary document"
+name = "summary"
+[budget]
+max_clarification_questions = 3
+max_execution_iterations = 20
+max_planning_iterations = 3
+research_depth = "shallow"
+reserved_verification_fraction = 0.15
+time_budget_minutes = 60
+tool_call_budget = 50
+[control]
+escalation_conditions = []
+stop_conditions = []
+[quality]
+hard_constraints = []
+soft_objectives = []
+[routing]
+domain_packs = []
+risk_level = "low"
+risk_overlays = ["informational"]
+[routing.authorization]
+boundaries = []
+granted_permissions = []
+requires_confirmation_for = []
+[scope]
+constraints = []
+non_goals = []
+[[scope.assumptions]]
+confidence = "medium"
+safe_default = true
+statement = "A two-part deliverable (short summary + detailed appendix) satisfies both stated needs."
+[[scope.open_questions]]
+answer = "Length wins: produce a one-paragraph executive summary, plus a separate appendix listing all 12 findings in full detail, so both intents are honored in different sections."
+classification = "blocking"
+question = "Should the one-paragraph length constraint or the 'all 12 findings in full detail' constraint take priority, since both cannot hold at once?"
+resolution_status = "answered"
+[status]
+budget_expired = false
+completion_status = "not_started"
+omitted_work = []
+remaining_uncertainty = ["The requester has not confirmed the two-part resolution; if they truly need a single paragraph with no appendix, some findings will be compressed to the point of losing detail."]
+residual_risks = []
+unverified_claims = []
+verified_facts = []

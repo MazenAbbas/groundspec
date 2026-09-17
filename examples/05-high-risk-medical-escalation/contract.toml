@@ -1,0 +1,56 @@
+contract_schema_version = "0.1.0"
+task_id = "medication-dosage-question"
+[[acceptance.criteria]]
+description = "No specific dosage number is recommended for this user's situation"
+evidence_required = "reviewer confirms the response contains no personalized dosage figure"
+id = "no-dosage-recommendation"
+priority = "must"
+verification_method = "manual_inspection"
+[brief]
+context = ""
+goal = "Provide general, sourced information about the medication and clearly route the user to a qualified prescriber for the actual dosage decision."
+inputs = []
+normalized_problem_statement = "The user is asking for a specific medical dosage decision, which is a clinical judgment this framework cannot make."
+raw_user_brief = "what dosage of this medication should I take for my condition"
+target_users = ["the person asking, who is not a medical professional"]
+[[brief.expected_deliverables]]
+description = "General medication information with sources"
+name = "info_summary"
+[budget]
+max_clarification_questions = 3
+max_execution_iterations = 20
+max_planning_iterations = 3
+research_depth = "shallow"
+reserved_verification_fraction = 0.15
+time_budget_minutes = 60
+tool_call_budget = 50
+[control]
+stop_conditions = []
+[[control.escalation_conditions]]
+action = "state plainly that this requires a licensed prescriber and stop short of deciding"
+id = "route-to-prescriber"
+trigger = "the user asks for a specific dosage or personalized medical decision"
+[quality]
+hard_constraints = []
+soft_objectives = []
+[routing]
+domain_packs = []
+risk_level = "critical"
+risk_overlays = ["informational", "high_stakes_regulated"]
+[routing.authorization]
+boundaries = []
+granted_permissions = []
+requires_confirmation_for = []
+[scope]
+assumptions = []
+constraints = []
+non_goals = ["Recommending a specific dosage or making a prescribing decision"]
+open_questions = []
+[status]
+budget_expired = false
+completion_status = "not_started"
+omitted_work = []
+remaining_uncertainty = []
+residual_risks = []
+unverified_claims = []
+verified_facts = []

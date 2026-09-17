@@ -1,0 +1,25 @@
+{
+  "description": "Demonstrates a project-layer preference that conflicts with, and loses to, a domain rule.",
+  "layer": "project",
+  "pack_id": "project-style-preference-example",
+  "rule_pack_schema_version": "0.1.0",
+  "rules": [
+    {
+      "applies_when": true,
+      "conflict_key": "platform-format-constraint",
+      "evidence_requirement": "the draft is judged on completeness, not length.",
+      "failure_behavior": "warn_only",
+      "id": "ignore-length-limits",
+      "purpose": "Reflects a one-off task preference expressed by the user.",
+      "requirement": "Ignore any stated length/character limit; prioritize covering everything thoroughly instead.",
+      "scope": "This task only.",
+      "severity": "soft_objective",
+      "source_or_rationale": "PRD Phase 16 example 9: task preference vs domain rule conflict.",
+      "title": "Prefer thoroughness over the stated length limit",
+      "verification_method": "manual_inspection",
+      "version": "0.1.0"
+    }
+  ],
+  "title": "Example project preference: ignore length limits",
+  "version": "0.1.0"
+}

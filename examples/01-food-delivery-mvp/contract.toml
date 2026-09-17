@@ -1,0 +1,67 @@
+contract_schema_version = "0.1.0"
+task_id = "food-delivery-mvp"
+[[acceptance.criteria]]
+description = "A user can browse the one restaurant's menu and place one order end to end"
+evidence_required = "an automated test exercising the order flow, and its output"
+id = "order-flow-works"
+priority = "must"
+verification_method = "reproducible_command"
+[[acceptance.criteria]]
+description = "Another developer can follow demo_script and reproduce the demo"
+evidence_required = "a second person confirms the script works from a clean checkout"
+id = "demo-reproducible"
+priority = "should"
+verification_method = "manual_inspection"
+[brief]
+context = ""
+goal = "Ship a walking-skeleton MVP: one city, one restaurant, one order flow, working end to end."
+inputs = []
+normalized_problem_statement = "No MVP scope, target user, or acceptance criteria exist yet for the requested app; 'food delivery app' alone does not specify what 'done' looks like."
+raw_user_brief = "I want a food delivery app"
+target_users = ["a pilot cohort of customers in one city", "the one partner restaurant"]
+[[brief.expected_deliverables]]
+description = "A running MVP repository implementing the order flow"
+name = "mvp_repo"
+[[brief.expected_deliverables]]
+description = "Steps to demo the order flow locally"
+name = "demo_script"
+[budget]
+max_clarification_questions = 3
+max_execution_iterations = 20
+max_planning_iterations = 3
+research_depth = "shallow"
+reserved_verification_fraction = 0.15
+time_budget_minutes = 60
+tool_call_budget = 50
+[control]
+escalation_conditions = []
+stop_conditions = []
+[quality]
+hard_constraints = []
+soft_objectives = []
+[routing]
+risk_level = "medium"
+risk_overlays = ["informational", "filesystem_mutation"]
+[routing.authorization]
+boundaries = []
+granted_permissions = []
+requires_confirmation_for = []
+[[routing.domain_packs]]
+pack_id = "software"
+version = "0.1.0"
+[scope]
+constraints = []
+non_goals = ["Multi-city support", "Real payment processing (a sandboxed/mocked flow is enough)", "A driver-facing app", "Restaurant onboarding self-service"]
+open_questions = []
+[[scope.assumptions]]
+confidence = "medium"
+safe_default = true
+statement = "One pilot city and one partner restaurant is an acceptable MVP scope."
+[status]
+budget_expired = false
+completion_status = "not_started"
+omitted_work = []
+remaining_uncertainty = []
+residual_risks = []
+unverified_claims = []
+verified_facts = []

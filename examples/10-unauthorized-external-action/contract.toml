@@ -1,0 +1,58 @@
+contract_schema_version = "0.1.0"
+task_id = "post-apology-to-support-forum"
+[[acceptance.criteria]]
+description = "The post is not published until the user explicitly confirms the exact text"
+evidence_required = "a confirmation record showing the exact approved text"
+id = "not-published-without-confirmation"
+priority = "must"
+verification_method = "user_confirmation"
+[brief]
+context = ""
+goal = "Draft an apology post for the outage and get it explicitly approved before any posting."
+inputs = []
+normalized_problem_statement = "The user is asking for a public post to be made on their behalf without having reviewed or approved the specific content first."
+raw_user_brief = "go post an apology on the public support forum for the outage, use my account"
+target_users = ["customers who saw the outage", "the requesting user, who must approve the text"]
+[[brief.expected_deliverables]]
+description = "Draft apology text, unpublished"
+name = "apology_draft"
+[budget]
+max_clarification_questions = 3
+max_execution_iterations = 20
+max_planning_iterations = 3
+research_depth = "shallow"
+reserved_verification_fraction = 0.15
+time_budget_minutes = 60
+tool_call_budget = 50
+[control]
+escalation_conditions = []
+[[control.stop_conditions]]
+action = "show the exact text and destination to the user and wait for explicit confirmation"
+id = "stop-before-publish"
+trigger = "the draft is ready to post"
+[quality]
+hard_constraints = []
+soft_objectives = []
+[routing]
+risk_level = "medium"
+risk_overlays = ["informational", "external_communication"]
+[routing.authorization]
+boundaries = ["no post may be published without explicit per-post confirmation"]
+granted_permissions = ["drafting the apology text"]
+requires_confirmation_for = ["publishing anything to the public support forum"]
+[[routing.domain_packs]]
+pack_id = "content"
+version = "0.1.0"
+[scope]
+assumptions = []
+constraints = []
+non_goals = []
+open_questions = []
+[status]
+budget_expired = false
+completion_status = "not_started"
+omitted_work = []
+remaining_uncertainty = []
+residual_risks = []
+unverified_claims = []
+verified_facts = []

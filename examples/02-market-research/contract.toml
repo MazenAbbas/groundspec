@@ -1,0 +1,61 @@
+contract_schema_version = "0.1.0"
+task_id = "market-research-viability"
+[[acceptance.criteria]]
+description = "Recommendation is backed by at least 3 primary sources"
+evidence_required = "citations present next to each claim, with access dates"
+id = "sourced-recommendation"
+priority = "must"
+verification_method = "manual_inspection"
+[[acceptance.criteria]]
+description = "Any disagreement between sources on market size/growth is reported, not hidden"
+evidence_required = "the report names the disagreement and which side it favors, and why"
+id = "contradictions-surfaced"
+priority = "must"
+verification_method = "manual_inspection"
+[brief]
+context = ""
+goal = "Produce a go/no-go recommendation, with sources, on whether to enter the market for AI-assisted grocery list apps in the US in 2026."
+inputs = []
+normalized_problem_statement = "No evidence exists yet on whether this market is viable to enter."
+raw_user_brief = "research whether this market is promising"
+target_users = ["the founder deciding whether to build this"]
+[[brief.expected_deliverables]]
+description = "A sourced market analysis with a recommendation"
+name = "market_report"
+[budget]
+max_clarification_questions = 3
+max_execution_iterations = 20
+max_planning_iterations = 3
+research_depth = "shallow"
+reserved_verification_fraction = 0.15
+time_budget_minutes = 60
+tool_call_budget = 50
+[control]
+escalation_conditions = []
+stop_conditions = []
+[quality]
+hard_constraints = []
+soft_objectives = []
+[routing]
+risk_level = "low"
+risk_overlays = ["informational"]
+[routing.authorization]
+boundaries = []
+granted_permissions = []
+requires_confirmation_for = []
+[[routing.domain_packs]]
+pack_id = "research"
+version = "0.1.0"
+[scope]
+assumptions = []
+constraints = ["US market only", "Use sources no older than 3 years unless citing a foundational/structural fact"]
+non_goals = []
+open_questions = []
+[status]
+budget_expired = false
+completion_status = "not_started"
+omitted_work = []
+remaining_uncertainty = []
+residual_risks = []
+unverified_claims = []
+verified_facts = []

@@ -1,0 +1,55 @@
+contract_schema_version = "0.1.0"
+task_id = "rename-config-key"
+[[acceptance.criteria]]
+description = "A search for FOO_BAR finds zero remaining occurrences"
+evidence_required = "grep output showing zero matches for the old name"
+id = "no-old-name-remains"
+priority = "must"
+verification_method = "reproducible_command"
+[brief]
+context = ""
+goal = "Every reference to FOO_BAR in config and code uses FEATURE_FLAG_FOO_BAR instead."
+inputs = []
+normalized_problem_statement = "The config key name no longer matches the naming convention."
+raw_user_brief = "rename the FOO_BAR config key to FEATURE_FLAG_FOO_BAR everywhere"
+target_users = ["the developer maintaining this config"]
+[[brief.expected_deliverables]]
+description = "All references renamed consistently"
+name = "renamed_refs"
+[budget]
+max_clarification_questions = 3
+max_execution_iterations = 3
+max_planning_iterations = 1
+research_depth = "none"
+reserved_verification_fraction = 0.3
+time_budget_minutes = 5
+tool_call_budget = 10
+[control]
+escalation_conditions = []
+stop_conditions = []
+[quality]
+hard_constraints = []
+soft_objectives = []
+[routing]
+risk_level = "low"
+risk_overlays = ["informational", "filesystem_mutation"]
+[routing.authorization]
+boundaries = []
+granted_permissions = []
+requires_confirmation_for = []
+[[routing.domain_packs]]
+pack_id = "software"
+version = "0.1.0"
+[scope]
+assumptions = []
+constraints = []
+non_goals = []
+open_questions = []
+[status]
+budget_expired = false
+completion_status = "not_started"
+omitted_work = []
+remaining_uncertainty = []
+residual_risks = []
+unverified_claims = []
+verified_facts = []

@@ -1,0 +1,55 @@
+contract_schema_version = "0.1.0"
+task_id = "competitor-pricing-lookup"
+[[acceptance.criteria]]
+description = "Each competitor has either a sourced price or an explicit 'not publicly disclosed'"
+evidence_required = "no cell in the pricing table is a guess presented as fact"
+id = "pricing-or-honest-gap"
+priority = "must"
+verification_method = "manual_inspection"
+[brief]
+context = ""
+goal = "Report each competitor's enterprise pricing, or state clearly that it could not be found."
+inputs = []
+normalized_problem_statement = "Competitor enterprise pricing is not publicly listed for at least one competitor."
+raw_user_brief = "find out exactly what our top 3 competitors charge for the enterprise tier"
+target_users = ["the pricing team"]
+[[brief.expected_deliverables]]
+description = "Per-competitor pricing or 'unknown'"
+name = "pricing_table"
+[budget]
+max_clarification_questions = 3
+max_execution_iterations = 20
+max_planning_iterations = 3
+research_depth = "shallow"
+reserved_verification_fraction = 0.15
+time_budget_minutes = 60
+tool_call_budget = 50
+[control]
+escalation_conditions = []
+stop_conditions = []
+[quality]
+hard_constraints = []
+soft_objectives = []
+[routing]
+risk_level = "low"
+risk_overlays = ["informational"]
+[routing.authorization]
+boundaries = []
+granted_permissions = []
+requires_confirmation_for = []
+[[routing.domain_packs]]
+pack_id = "research"
+version = "0.1.0"
+[scope]
+assumptions = []
+constraints = []
+non_goals = []
+open_questions = []
+[status]
+budget_expired = false
+completion_status = "not_started"
+omitted_work = []
+remaining_uncertainty = []
+residual_risks = []
+unverified_claims = []
+verified_facts = []
