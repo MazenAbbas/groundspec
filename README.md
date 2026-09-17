@@ -2,7 +2,7 @@
 
 *A requirements compiler and verification framework for AI agent tasks.*
 
-**Status: pre-release candidate.** The deterministic core, rule engine, three domain packs, CLI, and Claude Code / Codex / generic adapters are implemented, tested, and passing in cross-platform CI (Ubuntu/Windows/macOS x Python 3.11-3.13; see the [Actions tab](https://github.com/MazenAbbas/groundspec/actions)). PyPI publication and external user validation have not happened yet -- see [Known limitations](#known-limitations--whats-still-pending) below.
+**Status: pre-release candidate.** The deterministic core, rule engine, three domain packs, CLI, the reusable Meta-Skill, and the Claude Code / Codex / generic adapters are implemented, tested, and passing in cross-platform CI (Ubuntu/Windows/macOS x Python 3.11-3.13; see the [Actions tab](https://github.com/MazenAbbas/groundspec/actions)). PyPI publication and external user validation have not happened yet -- see [Known limitations](#known-limitations--whats-still-pending) below.
 
 ## What problem does this solve?
 
@@ -40,9 +40,47 @@ Only what the deterministic core actually does, offline, with no model call:
 
 It does not make an incapable model capable, guarantee factual correctness or task success, replace domain expertise or professional review (medical/legal/financial/safety), eliminate hallucinations, infer missing authorization, verify actions it cannot observe, make a malicious tool safe, turn a subjective preference into objective truth, or execute anything remote without approval. Natural-language understanding -- reading a vague brief and drafting a first-pass contract -- is the AI Skill's job, not the deterministic CLI's; see [docs/architecture.md](docs/architecture.md#the-deterministic--model-dependent-boundary) for exactly where that line is drawn, and why crossing it silently is treated as a bug.
 
+## Two ways to use Groundspec
+
+**The Meta-Skill** (`groundspec skill export`) is a reusable, natural-language front end: install it once into Claude Code or Codex, then say "use Groundspec to..." for any new task. It reads your request, classifies what's actually missing, asks only high-value questions, builds and validates a Task Contract through the real CLI (never by hand-writing TOML), routes it to the right rule packs, guides execution, and reports a mechanically-derived completion state. This is the ordinary path -- you never need to touch the schema or the CLI's individual commands directly. See [Quick, Guided, and Audit modes](#quick-guided-and-audit-modes) below.
+
+**Per-task compiled Skills** (`groundspec compile`) are the original, lower-level mechanism from `v0.1`: given an *already-built* Task Contract file, compile it into a one-off Skill or prompt for that specific task. The Meta-Skill uses this internally once it has a contract; you can also use it directly if you're scripting contract creation yourself or already have a contract from somewhere else. Both mechanisms remain fully supported and independent -- the Meta-Skill is additive, not a replacement.
+
+```
+                    ┌─────────────────────────────────────────┐
+  "use Groundspec   │   Meta-Skill (model-dependent)            │
+  to build/study/   │   - classify missing info                 │
+  audit X"    ──────▶   - ask only high-value questions          │
+                    │   - build contract via `groundspec create`│
+                    └───────────────────┬───────────────────────┘
+                                        │ Task Contract (TOML/JSON)
+                                        ▼
+                    ┌─────────────────────────────────────────┐
+                    │  Deterministic CLI (groundspec)            │
+                    │  validate → audit → compile → evaluate     │
+                    └───────────────────┬───────────────────────┘
+                                        │ compiled Skill / prompt,
+                                        │ then a completion state
+                                        ▼
+                              PASS / PASS_WITH_CAVEATS /
+                              FAIL / INCOMPLETE / BLOCKED
+```
+
+Only the top box is model-dependent; everything below the first arrow is the same deterministic engine described throughout this README, unchanged by the Meta-Skill's existence.
+
+## Quick, Guided, and Audit modes
+
+| Mode | For | What happens |
+|---|---|---|
+| **Quick** | a fast, well-scoped ask | Safe defaults, at most 3 high-value questions, assumptions shown, contract built and validated, reversible work proceeds immediately; stops to ask before anything irreversible/external/costly. |
+| **Guided** | product/research/engineering/professional work | Prioritized clarification questions, exposes goal/stakeholders/constraints/acceptance/risk/budget explicitly, explains trade-offs in plain language, shows a contract preview before consequential execution. |
+| **Audit** | an existing plan, PRD, prompt, contract, repo, or deliverable | Finds ambiguity, contradictions, missing evidence, hidden assumptions, unverifiable claims, weak acceptance criteria; returns a corrected contract or a remediation report; never modifies the audited artifact unless asked to. |
+
+The Skill detects the likely mode from your request but honors an explicit override ("in guided mode," "just audit this"). Full policy: [the Meta-Skill's own clarification-policy reference](src/groundspec/metaskill/canonical/groundspec/references/clarification-policy.md).
+
 ## The Task Contract
 
-A contract is one JSON or TOML document validated against [`task_contract.v0_1_0.schema.json`](src/groundspec/schema/task_contract.v0_1_0.schema.json). Top-level sections: `brief` (raw request, normalized problem, goal, users, deliverables), `scope` (constraints, non-goals, assumptions, open questions), `routing` (domain packs, risk overlays, risk level, authorization), `quality` (hard constraints, soft objectives), `acceptance` (criteria with a verification method and required evidence per item), `budget` (time/iteration/tool/cost limits, plus a reserved verification fraction), `control` (stop/escalation conditions), and `status` (completion state, verified facts, unverified claims, remaining uncertainty, residual risks). Full field-by-field reference: [docs/schema-reference.md](docs/schema-reference.md).
+A contract is one JSON or TOML document validated against a versioned JSON Schema (currently [`0.1.0`](src/groundspec/schema/task_contract.v0_1_0.schema.json) or [`0.2.0`](src/groundspec/schema/task_contract.v0_2_0.schema.json) -- both fully supported; see [docs/schema-reference.md](docs/schema-reference.md) for the one-enum-value difference between them). Top-level sections: `brief` (raw request, normalized problem, goal, users, deliverables), `scope` (constraints, non-goals, assumptions, open questions), `routing` (domain packs, risk overlays, risk level, authorization), `quality` (hard constraints, soft objectives), `acceptance` (criteria with a verification method and required evidence per item), `budget` (time/iteration/tool/cost limits, plus a reserved verification fraction), `control` (stop/escalation conditions), and `status` (completion state, verified facts, unverified claims, remaining uncertainty, residual risks). Full field-by-field reference: [docs/schema-reference.md](docs/schema-reference.md).
 
 ## Hard constraints vs. the loss function
 
@@ -58,13 +96,28 @@ Rules are layered, in fixed precedence order: **core invariants** (built in, uni
 
 ## Clarification algorithm
 
-For each piece of missing information, the question is: would the answer materially change the deliverable, does a safe default exist, can it be discovered from context, and would guessing create real risk? Missing information is classified as **blocking** (no useful progress without it), **important but defaultable** (a safe default preserves intent -- apply it and record the assumption), or **optional** (doesn't materially change the result -- don't ask). This classification lives in `scope.open_questions[].classification` and `scope.assumptions[]` in the schema itself, so it's inspectable after the fact, not just a behavior the model is asked to follow. See [examples/06-contradictory-requirements](examples/06-contradictory-requirements/) for a worked case where two requirements conflict and the resolution is recorded rather than silently picked.
+For each piece of missing information, the question is: would the answer materially change the deliverable, does a safe default exist, can it be discovered from context, and would guessing create real risk? The schema (`0.2.0`) classifies missing information as **blocking** (no useful progress without it), **high-value** (not strictly blocking, but worth asking if the question budget allows -- schema value `high_value`, new in `0.2.0`), **important but defaultable** (a safe default preserves intent -- apply it and record the assumption; schema value `important_defaultable`), or **optional** (doesn't materially change the result -- don't ask, don't record it). This classification lives in `scope.open_questions[].classification` and `scope.assumptions[]` in the schema itself, so it's inspectable after the fact, not just a behavior the model is asked to follow. The Meta-Skill implements the full policy (question budgets per mode, a hard ceiling via `budget.max_clarification_questions`, how to record assumptions) -- see its [clarification-policy reference](src/groundspec/metaskill/canonical/groundspec/references/clarification-policy.md). See [examples/06-contradictory-requirements](examples/06-contradictory-requirements/) for a worked case where two requirements conflict and the resolution is recorded rather than silently picked, and [examples/metaskill/](examples/metaskill/) for the Meta-Skill's own worked scenarios.
 
-## Quickstart
+## Quickstart (5 minutes)
+
+**Install and export the Meta-Skill into your AI tool:**
 
 ```bash
-pip install groundspec        # once published -- see "Known limitations" below
-groundspec doctor             # confirm the install and bundled rule packs are healthy
+pip install groundspec                                        # once published -- see Known limitations below
+groundspec doctor                                              # confirm the install and bundled rule packs are healthy
+groundspec skill export --target claude-code --output .        # writes .claude/skills/groundspec/
+groundspec skill export --target codex --output .              # writes .agents/skills/groundspec/
+```
+
+Then, in Claude Code, invoke it explicitly (`/groundspec use groundspec to study and plan a food-delivery application`) or just describe an ambiguous/multi-step/high-stakes task and let it activate automatically. In Codex, invoke it with `$groundspec` the same way. It will ask at most a few high-value questions, build and validate a real Task Contract behind the scenes (never asking you to write TOML), and report back a `PASS`/`PASS_WITH_CAVEATS`/`FAIL`/`INCOMPLETE`/`BLOCKED` completion state grounded in actual evidence -- see [Quick, Guided, and Audit modes](#quick-guided-and-audit-modes) above.
+
+**Inspecting what it produced:** the Meta-Skill's workflow always leaves a real contract file on disk (wherever the conversation put it) -- open it in any text editor, or run `groundspec validate <file>` / `groundspec audit <file>` yourself to check it independently of whatever the AI told you.
+
+### Under the hood: the same thing via the CLI directly
+
+This is what the Meta-Skill actually runs on your behalf -- useful if you're scripting contract creation yourself, or already have a contract from elsewhere:
+
+```bash
 groundspec create --task-id write-launch-post \
   --brief "write a linkedin post announcing our launch" \
   --goal "produce one LinkedIn post announcing the launch" \
@@ -81,15 +134,19 @@ groundspec compile launch-post.toml --target claude-code   # or --target codex /
 
 ## Using it in Claude Code
 
-`groundspec compile contract.toml --target claude-code --out .` writes `.claude/skills/<task_id>/SKILL.md` (short, frontmatter-only) plus `reference.md` (the full compiled brief), matching [Anthropic's documented Skill format](https://code.claude.com/docs/en/skills). Claude Code will discover it under the project's `.claude/skills/` directory.
+**The Meta-Skill:** `groundspec skill export --target claude-code --output .` writes `.claude/skills/groundspec/SKILL.md` plus its `references/`, matching [Anthropic's documented Skill format](https://code.claude.com/docs/en/skills). Claude Code discovers it under the project's (or, with `--scope user`, your personal) `.claude/skills/` directory; invoke explicitly with `/groundspec` or let it activate automatically.
+
+**Per-task compiled Skills:** `groundspec compile contract.toml --target claude-code --out .` writes `.claude/skills/<task_id>/SKILL.md` (short, frontmatter-only) plus `reference.md` (the full compiled brief) for one already-built contract.
 
 ## Using it in Codex
 
-`groundspec compile contract.toml --target codex --out .` writes `.agents/skills/<task_id>/SKILL.md` plus `references/contract.md`, matching [OpenAI's documented Codex Skill format](https://learn.chatgpt.com/docs/build-skills). Codex also supports `AGENTS.md`-style instructions; the Skill format was chosen here as the closer analogue to a Claude Code Skill (see [docs/adapter-guide.md](docs/adapter-guide.md)).
+**The Meta-Skill:** `groundspec skill export --target codex --output .` writes `.agents/skills/groundspec/SKILL.md` plus its `references/`, matching [OpenAI's documented Codex Skill format](https://learn.chatgpt.com/docs/build-skills). Invoke with `$groundspec`. Codex also supports `AGENTS.md`-style instructions; the Skill format was chosen here as the closer analogue to a Claude Code Skill (see [docs/adapter-guide.md](docs/adapter-guide.md)).
+
+**Per-task compiled Skills:** `groundspec compile contract.toml --target codex --out .` writes `.agents/skills/<task_id>/SKILL.md` plus `references/contract.md` for one already-built contract.
 
 ## Using it with another AI
 
-`groundspec compile contract.toml --target generic` writes a single Markdown prompt with an explicit "limitations of prompt-only enforcement" notice up front: there is no runtime enforcing a plain prompt, so paste it as a system/first-turn message and expect to re-paste it if the conversation runs long.
+`groundspec compile contract.toml --target generic` writes a single Markdown prompt with an explicit "limitations of prompt-only enforcement" notice up front: there is no runtime enforcing a plain prompt, so paste it as a system/first-turn message and expect to re-paste it if the conversation runs long. (There is no generic-prompt export for the Meta-Skill itself in this release -- its natural-language workflow assumes a Skill-capable host; the per-task `generic` adapter above is unaffected.)
 
 ## Validating a contract
 
@@ -101,24 +158,40 @@ A rule pack is one JSON or TOML file validated against [`rule_pack.v0_1_0.schema
 
 ## How is my data handled?
 
-Local-first, offline-capable after install, no telemetry, no analytics, no account, no remote storage. The CLI only reads the files you name on the command line and only writes to the output paths you specify. See [SECURITY.md](SECURITY.md) and [docs/threat-model.md](docs/threat-model.md).
+Local-first, offline-capable after install, no telemetry, no analytics, no account, no remote storage. The deterministic CLI only reads the files you name on the command line and only writes to the output paths you specify; `groundspec skill export` additionally refuses to overwrite an existing export without `--force` and writes atomically (see [docs/threat-model.md](docs/threat-model.md)). The Meta-Skill itself makes no network calls of its own -- whatever AI host is running it (Claude Code, Codex) handles the actual model inference under that host's own data-handling terms, not groundspec's. See [SECURITY.md](SECURITY.md).
+
+## Permission boundaries
+
+Neither the deterministic CLI nor the Meta-Skill will infer authorization for anything consequential. Publishing externally, spending money, an irreversible/destructive action, changing an account, sending a message on your behalf, deploying to production, or handling sensitive/personal data all require an explicit, per-action confirmation -- never a standing approval carried over from earlier in a conversation. This is enforced instructionally in the Meta-Skill (see its [execution-and-verification reference](src/groundspec/metaskill/canonical/groundspec/references/execution-and-verification.md)) and structurally in the contract via `routing.authorization` (`granted_permissions`, `boundaries`, `requires_confirmation_for`) plus the relevant risk-overlay hard constraints -- see [examples/10-unauthorized-external-action](examples/10-unauthorized-external-action/) for a worked case.
 
 ## What's experimental, and what still requires human review?
 
-The rule content itself (which requirements belong in each domain pack, and their weights) reflects one reasonable starting design, not a validated standard -- see [Known limitations](#known-limitations--whats-still-pending). Every hard constraint whose `verification_method` is `manual_inspection`, `user_confirmation`, or `external_reference_check` requires a human or the executing AI Skill to actually check it; `groundspec audit`/`evaluate` will tell you which constraints these are, but cannot itself verify them. High-stakes domains (medical/legal/financial/safety) get only the general risk overlay in v0.1 -- see [Product boundaries](#product-boundaries) below.
+The rule content itself (which requirements belong in each domain pack, and their weights) reflects one reasonable starting design, not a validated standard -- see [Known limitations](#known-limitations--whats-still-pending). Every hard constraint whose `verification_method` is `manual_inspection`, `user_confirmation`, or `external_reference_check` requires a human or the executing AI Skill to actually check it; `groundspec audit`/`evaluate` will tell you which constraints these are, but cannot itself verify them. High-stakes domains (medical/legal/financial/safety) get only the general risk overlay -- see [Product boundaries](#product-boundaries) below. The Meta-Skill's natural-language behavior (mode detection, question selection, judgment calls about evidence) is inherently model-dependent and not deterministic -- see [current evaluation status](#current-evaluation-status).
 
 ## Product boundaries
 
-Groundspec does not: make an incapable model capable; guarantee factual correctness or task success; replace domain expertise or required professional review; eliminate hallucinations; infer missing authorization; verify actions it cannot observe; make a malicious tool safe; turn a subjective preference into objective truth; support every profession (v0.1 ships three domain packs: software, research, content); execute any remote action without approval; or offer a hosted service or third-party rule-pack marketplace.
+Groundspec does not: make an incapable model capable; guarantee factual correctness or task success; replace domain expertise or required professional review; eliminate hallucinations; infer missing authorization; verify actions it cannot observe; make a malicious tool safe; turn a subjective preference into objective truth; support every profession (three domain packs ship: software, research, content); execute any remote action without approval; or offer a hosted service or third-party rule-pack marketplace. The Meta-Skill specifically does not guarantee it asks the objectively right questions, that its mode/intent detection is always correct, or that its judgment about whether evidence satisfies a criterion is reliable -- it structures and records that judgment so it can be checked, it doesn't replace the checking.
+
+## Current evaluation status
+
+- **Deterministic engine:** fully covered by the automated test suite (counts and results in [CHANGELOG.md](CHANGELOG.md) and each release's notes) -- schema validation, rule precedence, budget arithmetic, and completion-state derivation are all unit- and integration-tested, not just asserted.
+- **Meta-Skill, one live run:** [examples/metaskill/03-software-csv-export](examples/metaskill/03-software-csv-export/) is a genuine live dry run -- a fresh, isolated subagent followed only the exported Skill files and the real CLI to complete a real task end to end, independently re-verified afterward. It found and led to fixing four real gaps in the Skill's instructions. It is one scenario, one run, not a statistically powered evaluation.
+- **Meta-Skill, three constructed examples:** [examples/metaskill/](examples/metaskill/)'s other three scenarios demonstrate the target contract shape but were authored during development, not captured from a live run -- each says so in its own `session-notes.md`.
+- **The 30-scenario deterministic-engine evaluation corpus and its 3-arm baseline comparison protocol** are built (`eval/`) but the live-model comparison itself has not been run -- see [docs/evaluation-methodology.md](docs/evaluation-methodology.md), explicitly marked `PENDING`.
+- **External user validation** (non-technical users, students, a PM, a developer, a researcher, a marketer) has not happened -- see [docs/user-validation-protocol.md](docs/user-validation-protocol.md), explicitly marked `PENDING`.
+
+None of the above is invented; where a result doesn't exist yet, it's labeled `PENDING`, not omitted or implied.
 
 ## Known limitations / what's still pending
 
-- **Not yet published to PyPI.** The GitHub repository is public and releases (starting at `v0.1.0rc1`) ship a wheel and sdist directly; install those, or `pip install -e .` from a clone.
+- **Not yet published to PyPI.** The GitHub repository is public and releases ship a wheel and sdist directly; install those, or `pip install -e .` from a clone.
 - **Cross-platform CI is green** on Ubuntu/Windows/macOS x Python 3.11-3.13 as of this release -- see `.github/workflows/ci.yml` and the [Actions tab](https://github.com/MazenAbbas/groundspec/actions) for the actual run history.
-- **The evaluation corpus (30 scenarios, [eval/scenarios/scenarios.json](eval/scenarios/scenarios.json)) and its metrics ([eval/metrics.py](eval/metrics.py)) are built and unit-tested, but the 3-arm baseline comparison itself has not been run against a live model** -- seven scenarios are already mechanically checked against this repository's own deterministic tests (see each scenario's `verified_by` field); the rest are marked `requires_model_run` and PENDING. See [docs/evaluation-methodology.md](docs/evaluation-methodology.md).
+- **The 30-scenario evaluation corpus ([eval/scenarios/scenarios.json](eval/scenarios/scenarios.json)) and its metrics ([eval/metrics.py](eval/metrics.py)) are built and unit-tested, but the 3-arm baseline comparison itself has not been run against a live model** -- seven scenarios are already mechanically checked against this repository's own deterministic tests (see each scenario's `verified_by` field); the rest are marked `requires_model_run` and PENDING. See [docs/evaluation-methodology.md](docs/evaluation-methodology.md).
+- **The Meta-Skill has one genuine live-run evaluation (one scenario) and three constructed examples**, not a full evaluation suite -- see [Current evaluation status](#current-evaluation-status).
 - **External user validation (non-technical users, students, a PM, a developer, a researcher, a marketer) has not happened.** See [docs/user-validation-protocol.md](docs/user-validation-protocol.md) for the planned protocol.
 - **Only three domain packs exist** (software, research, content); no medical/legal/financial packs are shipped, by design (see Product boundaries).
-- **The rule pack format supports a single file only** (no directories or archives) in v0.1, which sidesteps zip-slip/path-traversal risk in archive extraction entirely rather than solving it -- see [docs/threat-model.md](docs/threat-model.md).
+- **The rule pack format supports a single file only** (no directories or archives), which sidesteps zip-slip/path-traversal risk in archive extraction entirely rather than solving it -- see [docs/threat-model.md](docs/threat-model.md).
+- **The Meta-Skill's export safety checks a symlink at the destination and its immediate parent, not the full ancestor chain** -- see [docs/threat-model.md](docs/threat-model.md).
 
 ## Documentation
 
@@ -129,7 +202,8 @@ Groundspec does not: make an incapable model capable; guarantee factual correctn
 - [docs/threat-model.md](docs/threat-model.md) -- assets, attackers, mitigations, remaining risk
 - [docs/evaluation-methodology.md](docs/evaluation-methodology.md) -- metrics, scenarios, and what's pending
 - [docs/user-validation-protocol.md](docs/user-validation-protocol.md) -- the planned external testing protocol
-- [examples/](examples/) -- ten worked scenarios, each validated by the test suite
+- [examples/](examples/) -- ten worked v0.1-style scenarios, each validated by the test suite
+- [examples/metaskill/](examples/metaskill/) -- four Meta-Skill scenarios, including one genuine live dry run
 - [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), [CHANGELOG.md](CHANGELOG.md)
 
 ## License
