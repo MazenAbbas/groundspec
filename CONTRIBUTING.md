@@ -1,6 +1,6 @@
 # Contributing
 
-Groundspec is pre-release (v0.1.0rc1). Issues and pull requests are welcome once the repository is public; until then, treat this file as documentation of the intended workflow.
+Groundspec is pre-release. The repository is public at [github.com/MazenAbbas/groundspec](https://github.com/MazenAbbas/groundspec); issues and pull requests are welcome.
 
 ## Setup
 

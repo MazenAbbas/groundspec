@@ -2,7 +2,7 @@
 
 *A requirements compiler and verification framework for AI agent tasks.*
 
-**Status: pre-release candidate (v0.1.0rc1).** The deterministic core, rule engine, three domain packs, CLI, and Claude Code / Codex / generic adapters are implemented and tested. Cross-platform CI, PyPI publication, and external user validation have not happened yet -- see [Known limitations](#known-limitations--whats-still-pending) below.
+**Status: pre-release candidate.** The deterministic core, rule engine, three domain packs, CLI, and Claude Code / Codex / generic adapters are implemented, tested, and passing in cross-platform CI (Ubuntu/Windows/macOS x Python 3.11-3.13; see the [Actions tab](https://github.com/MazenAbbas/groundspec/actions)). PyPI publication and external user validation have not happened yet -- see [Known limitations](#known-limitations--whats-still-pending) below.
 
 ## What problem does this solve?
 
@@ -113,8 +113,8 @@ Groundspec does not: make an incapable model capable; guarantee factual correctn
 
 ## Known limitations / what's still pending
 
-- **Not yet published to PyPI or GitHub as public.** All commands above work from a local clone (`pip install -e .`).
-- **Cross-platform CI is authored but its green-run history is not yet established** -- see `.github/workflows/ci.yml` and [docs/architecture.md](docs/architecture.md).
+- **Not yet published to PyPI.** The GitHub repository is public and releases (starting at `v0.1.0rc1`) ship a wheel and sdist directly; install those, or `pip install -e .` from a clone.
+- **Cross-platform CI is green** on Ubuntu/Windows/macOS x Python 3.11-3.13 as of this release -- see `.github/workflows/ci.yml` and the [Actions tab](https://github.com/MazenAbbas/groundspec/actions) for the actual run history.
 - **The evaluation corpus (30 scenarios, [eval/scenarios/scenarios.json](eval/scenarios/scenarios.json)) and its metrics ([eval/metrics.py](eval/metrics.py)) are built and unit-tested, but the 3-arm baseline comparison itself has not been run against a live model** -- seven scenarios are already mechanically checked against this repository's own deterministic tests (see each scenario's `verified_by` field); the rest are marked `requires_model_run` and PENDING. See [docs/evaluation-methodology.md](docs/evaluation-methodology.md).
 - **External user validation (non-technical users, students, a PM, a developer, a researcher, a marketer) has not happened.** See [docs/user-validation-protocol.md](docs/user-validation-protocol.md) for the planned protocol.
 - **Only three domain packs exist** (software, research, content); no medical/legal/financial packs are shipped, by design (see Product boundaries).
