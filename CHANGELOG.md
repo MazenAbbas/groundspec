@@ -2,7 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
-## [0.2.0rc1] - unreleased
+## [0.2.0rc2] - unreleased
+
+Regression-fix release. An independent user test of `v0.2.0rc1`'s Meta-Skill (Guided-mode PRD scoping) found real behavioral defects: material product decisions silently defaulted with zero clarification questions; an explicit "do not perform any external action" instruction did not stop ten web searches; a model self-review was recorded as a verified fact; "no source exists" was asserted from one bounded search; row/label counts were treated as proof of semantic correctness; and `Completion state: PASS` was reported despite an unresolved critical risk, weak-evidence 'must' criteria, and the authorization violation. Full account: `tests/regression/food_delivery_v0_2_0rc1/README.md`.
+
+### Fixed
+
+- Contract schema **0.3.0** (additive; `0.1.0`/`0.2.0` untouched): `status.verified_facts.evidence_label` narrowed to labels that mean real verification happened (`VERIFIED`, `MEASURED`, `SOURCE_VERIFIED`, `USER_CONFIRMED`, `HUMAN-REVIEWED`) -- a self-review can no longer be schema-valid there. `status.unverified_claims` gains an optional `evidence_label` for the weaker labels plus two new ones, `ASSUMPTION` and `RESEARCH_NEEDED` (the latter bounded to "no suitable source found in the searches performed," never "no source exists"). `scope.assumptions.safe_default` is now `const: true` -- an item unsafe to default must be an `open_question`, not an assumption. `status.residual_risks` gains `affects_deliverable_validity` (default `true`), distinguishing a critical risk that undermines the deliverable's validity from one that is itself a legitimate finding the task was asked to produce.
+- `groundspec.metaskill.completion.derive_completion_state` gains `authorization_boundary_violated` and `unresolved_critical_risk_to_validity`, both forcing `FAIL`, checked ahead of acceptance criteria. `evaluate_acceptance_criteria` now accepts a richer per-criterion `{met, evidence_label}` result (the plain-bool shape remains fully supported) and flags a 'must' criterion as evidence-inadequate -- producing `INCOMPLETE`, never a silent `PASS` -- when its `verification_method` demands real evidence but only a weak label was supplied. Wired into `groundspec evaluate` as a further additive, backward-compatible extension of the `evidence.json` convention (new `authorization_violations` key).
+- Meta-Skill content rewritten to match: network access, web search, fetches, and API calls are now explicitly enumerated as external actions with no "just a search" exception; a concrete checklist of near-universally-material dimensions for product/PRD-scoping requests (geography, business model shape, persona, monetization, payments, language, research-vs-launch-plan scope); an explicit rule that a deferred high-value item is recorded as an open question, never folded into an assumption; full documentation of the new evidence taxonomy and the hardened completion-state gates.
+- New maintained regression scenario (`tests/regression/food_delivery_v0_2_0rc1/`) converting the exact reported test into fixtures and deterministic assertions -- not prose matching.
+- Two more stale pre-publication statements corrected (`SECURITY.md`'s hardcoded prerelease version; `CHANGELOG.md`'s own `[0.2.0rc1]` entry, which said "unreleased" after it had, in fact, been released).
+
+## [0.2.0rc1] - 2026-09-17
 
 Major prerelease feature: the **Groundspec Meta-Skill**, a reusable, natural-language front end that turns "use Groundspec to..." into a validated Task Contract, guided execution, and a mechanically-derived completion state -- without the user ever hand-writing TOML. The existing deterministic CLI and per-task compiled Skills (`groundspec compile`) are unchanged and remain fully supported; the Meta-Skill is additive.
 

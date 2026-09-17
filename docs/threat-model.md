@@ -141,10 +141,10 @@ Format per threat: **Asset** at risk, **Attacker/failure source**, **Attack path
 
 - **Asset:** the guarantee that a contract's declared schema version is actually the one it was validated against.
 - **Attack path:** an attacker edits `contract_schema_version` down to an older, laxer schema after a stricter one was expected.
-- **Existing mitigation:** there is currently only one schema version (`0.1.0`), so there is nothing to downgrade to; the version is a `const`, and `schema_loader` refuses any version it doesn't ship rather than falling back to a "closest match."
-- **Remaining risk:** becomes a real concern once `0.2.0` ships -- the migration strategy in `architecture.md` commits to explicit, tested migrations specifically so a downgrade can't be used to smuggle a document past stricter later checks.
-- **Test:** `tests/unit/test_contract_roundtrip.py::test_unsupported_schema_version_is_rejected`.
-- **User responsibility:** none currently; revisit at the next schema version.
+- **Existing mitigation:** the version is a `const` per schema file, and `schema_loader` refuses any version it doesn't ship rather than falling back to a "closest match" -- a document cannot claim a version and be validated against a different one.
+- **Remaining risk:** now materialized, and honestly unresolved: because `0.1.0`/`0.2.0` remain valid forever (by design, for backward compatibility -- see `architecture.md`), a document can deliberately declare `contract_schema_version: "0.1.0"` specifically to route around `0.3.0`'s hardening (e.g. to use `safe_default: false`, or to record a self-review as a `verified_facts` entry, both rejected under `0.3.0`). `groundspec create`/`new_contract` defaulting to `0.3.0` raises the bar for the common path, but nothing currently warns when an *existing* contract deliberately targets an older, laxer schema version. This is a real, disclosed gap, not a solved problem.
+- **Test:** `tests/unit/test_contract_roundtrip.py::test_unsupported_schema_version_is_rejected`; `tests/unit/test_schema_versioning.py::test_assumption_safe_default_false_still_allowed_in_0_1_0_and_0_2_0` documents (rather than hides) that the older, laxer behavior is still reachable on purpose.
+- **User responsibility:** if you specifically need `0.3.0`'s evidence-integrity guarantees, check `contract_schema_version` yourself rather than assuming the newest rules are in force -- `groundspec audit` does not currently flag an old-but-valid schema version as suspicious.
 
 ## Confused-deputy authorization errors
 
