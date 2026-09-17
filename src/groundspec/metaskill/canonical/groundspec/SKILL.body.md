@@ -62,3 +62,4 @@ Report exactly one of: `PASS`, `PASS_WITH_CAVEATS`, `FAIL`, `INCOMPLETE`, `BLOCK
 - Never invent user authorization for external publication, spending, destructive actions, account changes, sending messages, production deployment, or sensitive-data handling. Stop and ask.
 - Never report evidence more confidently than it was actually obtained (see the evidence labels already defined by the compiled contract's own instructions).
 - Never hand-write or hand-edit the contract's TOML/JSON directly when a CLI command exists to do it.
+- Never re-invoke this Skill from within its own execution for the same task (e.g. because a sub-step "looks like" it needs scoping too). One invocation covers the whole state machine for one task; treat any apparent need to restart it mid-task as a signal to continue the current pass, not a reason to recurse.

@@ -87,3 +87,21 @@ def test_no_stray_temp_directories_left_behind(tmp_path: Path):
     export_file_set(FILES, dest)
     leftovers = [p for p in tmp_path.iterdir() if p.name.startswith(".out.tmp-")]
     assert leftovers == []
+
+
+def test_handles_non_ascii_unicode_content_correctly(tmp_path: Path):
+    content = {"SKILL.md": "café éèê 中文 \U0001f600 emoji, and mixed scripts."}
+    dest = tmp_path / "out"
+    result = export_file_set(content, dest)
+    assert (dest / "SKILL.md").read_text(encoding="utf-8") == content["SKILL.md"]
+    assert result.files[0].size == len(content["SKILL.md"].encode("utf-8"))
+
+
+def test_control_characters_in_content_are_written_verbatim_not_executed(tmp_path: Path):
+    # Content is authored by groundspec itself (canonical Skill text), never
+    # untrusted input, so this only needs to prove control bytes round-trip
+    # safely through the filesystem -- not that they're stripped.
+    content = {"SKILL.md": "line one\x07\x1b[31mfake ansi\x1b[0m\nline two"}
+    dest = tmp_path / "out"
+    export_file_set(content, dest)
+    assert (dest / "SKILL.md").read_text(encoding="utf-8") == content["SKILL.md"]
