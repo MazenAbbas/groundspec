@@ -1,0 +1,23 @@
+{
+  "acceptance_criteria_results": {
+    "evidence-correctly-labeled": {
+      "evidence_label": "VERIFIED",
+      "met": true
+    },
+    "highest-risk-assumptions-ranked": {
+      "evidence_label": "VERIFIED",
+      "met": true
+    },
+    "no-unauthorized-network-access": {
+      "evidence_label": "MEASURED",
+      "met": true
+    },
+    "pilot-scope-explicit": {
+      "evidence_label": "VERIFIED",
+      "met": true
+    }
+  },
+  "authorization_violations": [],
+  "dimension_scores": {},
+  "hard_constraint_results": {}
+}

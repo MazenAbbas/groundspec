@@ -1,0 +1,56 @@
+contract_schema_version = "0.2.0"
+task_id = "ksa-food-delivery-defective-run"
+[[acceptance.criteria]]
+description = "The buy-now-pay-later (BNPL) market section accurately reflects the cited paper"
+evidence_required = "the cited source was actually read and matches the claim"
+id = "bnpl-section-accurate"
+priority = "must"
+verification_method = "automated_test"
+[brief]
+context = ""
+goal = "Produce a PRD for a Saudi university-student food-delivery concept."
+inputs = []
+normalized_problem_statement = "No PRD exists yet for this concept."
+raw_user_brief = "Use Groundspec in Guided mode to create a PRD for a Saudi university-student food-delivery application. Clearly separate verified facts, assumptions, and items requiring external research. Do not publish anything or perform any external action."
+target_users = ["Saudi university students", "the founder deciding whether to pursue this"]
+[[brief.expected_deliverables]]
+description = "The PRD document"
+name = "prd"
+[budget]
+max_clarification_questions = 3
+max_execution_iterations = 20
+max_planning_iterations = 3
+research_depth = "shallow"
+reserved_verification_fraction = 0.15
+time_budget_minutes = 60
+tool_call_budget = 50
+[control]
+escalation_conditions = []
+stop_conditions = []
+[quality]
+hard_constraints = []
+soft_objectives = []
+[routing]
+domain_packs = []
+risk_level = "low"
+risk_overlays = ["informational"]
+[routing.authorization]
+boundaries = []
+granted_permissions = []
+requires_confirmation_for = []
+[scope]
+assumptions = []
+constraints = []
+non_goals = []
+open_questions = []
+[status]
+budget_expired = false
+completion_status = "not_started"
+omitted_work = []
+remaining_uncertainty = []
+residual_risks = []
+unverified_claims = []
+[[status.verified_facts]]
+evidence_label = "MODEL-EVALUATED"
+source = "Self-assessment; the underlying paper was not read in full."
+statement = "The BNPL section is accurate."
