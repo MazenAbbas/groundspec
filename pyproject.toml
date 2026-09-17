@@ -1,0 +1,96 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "groundspec"
+version = "0.1.0rc1"
+description = "A requirements compiler and verification framework that turns an incomplete AI-task request into an executable, auditable Task Contract."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "Mazen Al Abbas" }]
+keywords = [
+  "requirements-engineering",
+  "prompt-engineering",
+  "agent-evaluation",
+  "task-contract",
+  "acceptance-criteria",
+  "ai-agents",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: Software Development :: Documentation",
+  "Typing :: Typed",
+]
+dependencies = [
+  "jsonschema>=4.23,<5",
+]
+
+[project.urls]
+Homepage = "https://github.com/MazenAbbas/groundspec"
+Issues = "https://github.com/MazenAbbas/groundspec/issues"
+Changelog = "https://github.com/MazenAbbas/groundspec/blob/main/CHANGELOG.md"
+
+[project.scripts]
+groundspec = "groundspec.cli.main:main"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<9",
+  "pytest-cov>=5.0,<6",
+  "ruff>=0.7,<1",
+  "mypy>=1.13,<2",
+  "build>=1.2,<2",
+  "twine>=6.0,<8",
+  "types-jsonschema>=4.23,<5",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/groundspec"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/tests",
+  "/docs",
+  "/examples",
+  "/eval",
+  "/README.md",
+  "/LICENSE",
+  "/CHANGELOG.md",
+  "/SECURITY.md",
+  "/CONTRIBUTING.md",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+packages = ["groundspec"]
+mypy_path = "src"
