@@ -20,6 +20,15 @@ from groundspec.contract.normalize import fill_defaults
 from groundspec.contract.schema_loader import load_contract_schema
 from groundspec.contract.serialization import UnknownFileFormat, dump_document, load_document
 from groundspec.contract.validator import SchemaValidationError, validate_contract_dict
+from groundspec.metaskill.claude_export import render_claude_meta_skill
+from groundspec.metaskill.codex_export import render_codex_meta_skill
+from groundspec.metaskill.completion import derive_completion_state, evaluate_acceptance_criteria
+from groundspec.metaskill.export import (
+    DestinationExists,
+    ExportError,
+    export_file_set,
+)
+from groundspec.metaskill.validate import validate_skill_files
 from groundspec.packs.registry import (
     CORE_PACK_ID,
     DOMAIN_PACK_IDS,
@@ -287,6 +296,37 @@ def cmd_evaluate(args: object) -> int:
         print(f"Weighted total: {result.weighted_total:.3f}")
 
     passed = result.hard_constraints_passed and not expiry_violations
+
+    # Additive, backward-compatible: only computed when the caller actually
+    # supplies acceptance_criteria_results (new in 0.2.0rc1). Older
+    # evidence.json files (no such key) keep the exact 0.1.0rc1 behavior
+    # above -- this block never changes their exit code.
+    if "acceptance_criteria_results" in evidence:
+        acceptance = contract["acceptance"]
+        assert isinstance(acceptance, dict)
+        scope = contract["scope"]
+        assert isinstance(scope, dict)
+        criteria = acceptance["criteria"]
+        assert isinstance(criteria, list)
+        acceptance_eval = evaluate_acceptance_criteria(criteria, evidence["acceptance_criteria_results"])
+        open_questions = scope["open_questions"]
+        assert isinstance(open_questions, list)
+        has_blocking = any(
+            q["classification"] == "blocking" and q["resolution_status"] == "open" for q in open_questions
+        )
+        state = derive_completion_state(
+            hard_constraints_passed=result.hard_constraints_passed,
+            has_unresolved_blocking_questions=has_blocking,
+            budget_expired=bool(status.get("budget_expired", False)),
+            acceptance_criteria_met=acceptance_eval.must_criteria_met,
+        )
+        print(f"Completion state: {state}")
+        if acceptance_eval.missing_evidence_ids:
+            print(f"  missing evidence for: {', '.join(acceptance_eval.missing_evidence_ids)}")
+        if acceptance_eval.unmet_must_ids:
+            print(f"  unmet 'must' criteria: {', '.join(acceptance_eval.unmet_must_ids)}")
+        return 0 if state in ("PASS", "PASS_WITH_CAVEATS") else 1
+
     return 0 if passed else 1
 
 
@@ -336,5 +376,99 @@ def cmd_doctor(args: object) -> int:
             ok = False
     print(f"{OK} {len(all_ids)} built-in rule packs load" if ok else f"{FAIL} some built-in packs failed")
 
+    for name, renderer in (("claude-code", render_claude_meta_skill), ("codex", render_codex_meta_skill)):
+        try:
+            issues = validate_skill_files(renderer())
+        except Exception as exc:  # noqa: BLE001
+            print(f"{FAIL} meta-skill export for {name!r} failed to render: {exc}")
+            ok = False
+            continue
+        if issues:
+            print(f"{FAIL} meta-skill export for {name!r} failed structural validation:")
+            for issue in issues:
+                print(f"  - {issue}")
+            ok = False
+        else:
+            print(f"{OK} meta-skill export for {name!r} is structurally valid")
+
     print(f"\n{OK if ok else FAIL} doctor {'found no problems' if ok else 'found problems'}")
     return 0 if ok else 1
+
+
+_SKILL_RENDERERS = {"claude-code": render_claude_meta_skill, "codex": render_codex_meta_skill}
+_SKILL_SCOPE_DIR = {"claude-code": ".claude", "codex": ".agents"}
+_SKILL_USER_HOME_DIR = {"claude-code": ".claude", "codex": ".agents"}
+
+
+def _skill_destination(target: str, output: str | None, scope: str) -> Path:
+    if scope == "user":
+        return Path.home() / _SKILL_USER_HOME_DIR[target] / "skills" / "groundspec"
+    base = Path(output or ".")
+    return base / _SKILL_SCOPE_DIR[target] / "skills" / "groundspec"
+
+
+def cmd_skill_export(args: object) -> int:
+    target = args.target  # type: ignore[attr-defined]
+    scope = getattr(args, "scope", "project") or "project"
+    force = bool(getattr(args, "force", False))
+
+    renderer = _SKILL_RENDERERS.get(target)
+    if renderer is None:
+        print(f"{FAIL} unknown target {target!r}", file=sys.stderr)
+        return 2
+
+    files = renderer()
+    issues = validate_skill_files(files)
+    if issues:
+        print(f"{FAIL} generated meta-skill failed structural validation (this is a groundspec bug):")
+        for issue in issues:
+            print(f"  - {issue}")
+        return 1
+
+    destination = _skill_destination(target, getattr(args, "output", None), scope)
+    try:
+        result = export_file_set(files, destination, force=force)
+    except DestinationExists as exc:
+        print(f"{FAIL} {exc}", file=sys.stderr)
+        print("Pass --force to overwrite the existing export.", file=sys.stderr)
+        return 1
+    except ExportError as exc:
+        print(f"{FAIL} {exc}", file=sys.stderr)
+        return 1
+
+    print(f"{OK} exported {len(result.files)} file(s) to {result.destination}")
+    for entry in sorted(result.files, key=lambda f: f.relative_path):
+        print(f"  - {entry.relative_path} ({entry.size} bytes, sha256 {entry.sha256[:12]}...)")
+    if target == "claude-code":
+        print("\nClaude Code will discover this under its skills directory; invoke with /groundspec.")
+    else:
+        print("\nCodex will discover this under its skills directory; invoke with $groundspec.")
+    return 0
+
+
+def cmd_skill_validate(args: object) -> int:
+    path = Path(args.path)  # type: ignore[attr-defined]
+    if not path.is_dir():
+        print(f"{FAIL} {path} is not a directory", file=sys.stderr)
+        return 2
+
+    skill_md_path = path / "SKILL.md"
+    if not skill_md_path.is_file():
+        print(f"{FAIL} {path}: no SKILL.md found", file=sys.stderr)
+        return 1
+
+    files = {"SKILL.md": skill_md_path.read_text(encoding="utf-8")}
+    refs_dir = path / "references"
+    if refs_dir.is_dir():
+        for md_path in refs_dir.rglob("*.md"):
+            rel = "references/" + md_path.relative_to(refs_dir).as_posix()
+            files[rel] = md_path.read_text(encoding="utf-8")
+
+    issues = validate_skill_files(files)
+    if issues:
+        print(f"{FAIL} {path}: {len(issues)} structural issue(s)")
+        for issue in issues:
+            print(f"  - {issue}")
+        return 1
+    print(f"{OK} {path}: Skill structure is valid ({len(files)} file(s))")
+    return 0

@@ -1,0 +1,67 @@
+contract_schema_version = "0.2.0"
+task_id = "audit-linkedin-launch-post"
+[[acceptance.criteria]]
+description = "Every measurable/factual claim in the post is listed individually"
+evidence_required = "the audit report enumerates each claim (user count, savings figure, analyst ranking, urgency deadline) separately"
+id = "every-claim-identified"
+priority = "must"
+verification_method = "manual_inspection"
+[[acceptance.criteria]]
+description = "Each claim with no on-file evidence is flagged as unsupported, not silently accepted"
+evidence_required = "status.unverified_claims lists each one with a reason"
+id = "unsupported-claims-flagged"
+priority = "must"
+verification_method = "manual_inspection"
+[[acceptance.criteria]]
+description = "The '24 hours / gone forever' urgency claim is flagged as a fabricated-urgency risk per the content domain pack, independent of whether it happens to be true"
+evidence_required = "the audit report cites the no-fabricated-claims hard constraint explicitly"
+id = "fabricated-urgency-flagged"
+priority = "must"
+verification_method = "manual_inspection"
+[brief]
+context = ""
+goal = "Audit the draft post: identify every measurable/factual claim, check it against available evidence, and produce a remediation report -- do not rewrite the post unless asked to."
+inputs = []
+normalized_problem_statement = "An existing draft LinkedIn post makes several specific, checkable claims (a user count, a savings figure, an analyst ranking, a countdown) with no evidence on file for any of them."
+raw_user_brief = "Audit this LinkedIn launch post. Verify every measurable claim and remove claims that are not supported by evidence."
+target_users = ["whoever owns the post and decides whether to publish it"]
+[[brief.expected_deliverables]]
+description = "A remediation report listing each claim, its evidence status, and the recommended fix"
+name = "audit_report"
+[budget]
+max_clarification_questions = 3
+max_execution_iterations = 20
+max_planning_iterations = 3
+research_depth = "shallow"
+reserved_verification_fraction = 0.15
+time_budget_minutes = 60
+tool_call_budget = 50
+[control]
+escalation_conditions = []
+stop_conditions = []
+[quality]
+hard_constraints = []
+soft_objectives = []
+[routing]
+risk_level = "low"
+risk_overlays = ["informational", "external_communication"]
+[routing.authorization]
+boundaries = []
+granted_permissions = []
+requires_confirmation_for = []
+[[routing.domain_packs]]
+pack_id = "content"
+version = "0.1.0"
+[scope]
+assumptions = []
+constraints = []
+non_goals = ["Rewriting or publishing the post (Audit mode: report findings, don't modify unless asked)"]
+open_questions = []
+[status]
+budget_expired = false
+completion_status = "not_started"
+omitted_work = []
+remaining_uncertainty = []
+residual_risks = []
+unverified_claims = []
+verified_facts = []

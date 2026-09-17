@@ -1,12 +1,12 @@
-# Task Contract schema reference (v0.1.0)
+# Task Contract schema reference
 
-Canonical source: [`src/groundspec/schema/task_contract.v0_1_0.schema.json`](../src/groundspec/schema/task_contract.v0_1_0.schema.json) (JSON Schema, draft 2020-12). Every object in this schema sets `additionalProperties: false`, so an unknown key is always a validation error, never silently ignored. No field anywhere accepts arbitrary code.
+Two schema versions currently ship and are both fully supported: [`task_contract.v0_1_0.schema.json`](../src/groundspec/schema/task_contract.v0_1_0.schema.json) and [`task_contract.v0_2_0.schema.json`](../src/groundspec/schema/task_contract.v0_2_0.schema.json) (JSON Schema, draft 2020-12). They are identical except for one enum value -- see [architecture.md](architecture.md#schema-versioning-and-migration-strategy) for why. `groundspec create` and `contract.factory.new_contract` default to `0.2.0`; a `0.1.0` document keeps validating as-is. Every object in both schemas sets `additionalProperties: false`, so an unknown key is always a validation error, never silently ignored. No field anywhere accepts arbitrary code.
 
 ## Top level
 
 | Field | Type | Notes |
 |---|---|---|
-| `contract_schema_version` | `"0.1.0"` (const) | Never silently upgraded; see [architecture.md](architecture.md#schema-versioning-and-migration-strategy). |
+| `contract_schema_version` | `"0.1.0"` or `"0.2.0"` (const per schema file) | Never silently upgraded; see [architecture.md](architecture.md#schema-versioning-and-migration-strategy). |
 | `task_id` | string, `^[a-z0-9][a-z0-9-]{2,63}$` | A slug, not a UUID -- meant to be legible in filenames and logs. |
 | `brief` | object | See below. |
 | `scope` | object | See below. |
@@ -36,7 +36,7 @@ Canonical source: [`src/groundspec/schema/task_contract.v0_1_0.schema.json`](../
 | `constraints` | array of strings | Hard limits on how the task may be done. |
 | `non_goals` | array of strings | Explicitly out of scope, to prevent scope creep. |
 | `assumptions` | array of `{statement, confidence: low\|medium\|high, safe_default: bool}` | Anything inferred rather than stated. |
-| `open_questions` | array of `{question, classification: blocking\|important_defaultable\|optional, resolution_status: open\|answered\|defaulted, default_applied, answer}` | See [architecture.md](architecture.md) and the README's clarification-algorithm section. |
+| `open_questions` | array of `{question, classification: blocking\|high_value\|important_defaultable\|optional, resolution_status: open\|answered\|defaulted, default_applied, answer}` | `high_value` requires `contract_schema_version: "0.2.0"` (absent from `0.1.0`). See [architecture.md](architecture.md) and the README's clarification-algorithm section. |
 
 ## `routing`
 
