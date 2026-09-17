@@ -69,6 +69,31 @@ def build_parser() -> argparse.ArgumentParser:
     p_pack_validate.add_argument("path")
     p_pack_validate.set_defaults(func=commands.cmd_pack_validate)
 
+    p_skill = sub.add_parser("skill", help="Groundspec Meta-Skill export and validation.")
+    skill_sub = p_skill.add_subparsers(dest="skill_command", required=True)
+
+    p_skill_export = skill_sub.add_parser(
+        "export", help="Export the canonical Groundspec Meta-Skill for Claude Code or Codex."
+    )
+    p_skill_export.add_argument("--target", required=True, choices=["claude-code", "codex"])
+    p_skill_export.add_argument(
+        "--output", help="Base directory to export under (default: '.'). Ignored with --scope user."
+    )
+    p_skill_export.add_argument(
+        "--scope",
+        choices=["project", "user"],
+        default="project",
+        help="'project' (default) exports under --output; 'user' exports to the platform's user skills dir.",
+    )
+    p_skill_export.add_argument("--force", action="store_true", help="Overwrite an existing export.")
+    p_skill_export.set_defaults(func=commands.cmd_skill_export)
+
+    p_skill_validate = skill_sub.add_parser(
+        "validate", help="Structurally validate an exported Skill directory (SKILL.md + references/)."
+    )
+    p_skill_validate.add_argument("path")
+    p_skill_validate.set_defaults(func=commands.cmd_skill_validate)
+
     p_example = sub.add_parser("example", help="Write ready-to-copy example Task Contracts.")
     p_example.add_argument("--out", help="Output directory (default: current directory).")
     p_example.set_defaults(func=commands.cmd_example)
