@@ -26,6 +26,8 @@ DOMAIN_PACK_IDS: dict[str, str] = {
     "software": "domain-software",
     "research": "domain-research",
     "content": "domain-content",
+    "product-management": "product-management",
+    "data-science-ml": "data-science-ml",
 }
 
 
@@ -38,7 +40,15 @@ def _builtin_search_dirs() -> list[Path]:
     # editable installs alike are never zipped), so files() already returns
     # a usable Path without needing the as_file() extraction path.
     base = Path(str(resources.files("groundspec.packs")))
-    return [base, base / "risk_overlays", base / "software", base / "research", base / "content"]
+    return [
+        base,
+        base / "risk_overlays",
+        base / "software",
+        base / "research",
+        base / "content",
+        base / "product-management",
+        base / "data-science-ml",
+    ]
 
 
 def load_builtin(pack_id: str, *, extra_search_dirs: list[Path] | None = None) -> LoadedPack:

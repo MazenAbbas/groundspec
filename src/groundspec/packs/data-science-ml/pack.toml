@@ -1,0 +1,44 @@
+domain_pack_schema_version = "0.1.0"
+pack_id = "data-science-ml"
+version = "0.1.0"
+display_name = "Data Science and Machine Learning"
+description = "Validates plans, contracts, evidence, and completion claims for classification, regression, forecasting, CV/NLP/RAG, and related ML tasks -- without training models itself or adding heavy runtime dependencies."
+capabilities = [
+  "classification-modeling", "regression-modeling", "clustering", "recommendation",
+  "ranking", "anomaly-detection", "time-series-forecasting", "computer-vision",
+  "nlp", "retrieval-rag-evaluation", "model-comparison", "dataset-preparation",
+  "exploratory-modeling", "production-readiness-review",
+]
+supported_intents = ["plan-and-execute", "audit-existing"]
+suggested = ["research", "software"]
+
+[routing]
+triggers = [
+  "design a churn prediction experiment",
+  "add a prediction endpoint to an existing service",
+  "build a classifier",
+  "forecast demand",
+  "evaluate a RAG system",
+  "compare these two models",
+  "is this model ready for production",
+]
+exclusions = [
+  "a request to build an ordinary CRUD feature with no modeling/prediction component -- see software",
+  "a request whose actual goal is an answerable research question with no modeling involved -- see research",
+]
+
+[compatibility]
+min_platform_version = "1.0.0"
+
+[provides]
+rules = "data-science-ml.toml"
+questions = "questions.toml"
+evidence_policy = "evidence-policy.toml"
+acceptance_templates = "acceptance-templates.toml"
+completion_gates = "completion-gates.toml"
+references = ["references/domain-guidance.md"]
+tests = "tests/scenarios.toml"
+
+[provenance]
+source = "groundspec built-in"
+license = "MIT"

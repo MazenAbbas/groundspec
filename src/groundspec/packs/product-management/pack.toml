@@ -1,0 +1,43 @@
+domain_pack_schema_version = "0.1.0"
+pack_id = "product-management"
+version = "0.1.0"
+display_name = "Product Management"
+description = "PRDs, product discovery, MVP definition, roadmap and launch decisions -- without pretending to replace user research, legal review, or business judgment."
+capabilities = ["prd-authoring", "product-discovery", "roadmap-planning", "launch-criteria"]
+supported_intents = ["plan-and-execute", "audit-existing"]
+suggested = ["research"]
+
+[routing]
+triggers = [
+  "write a PRD",
+  "product discovery",
+  "define an MVP",
+  "product requirements",
+  "user problem",
+  "persona",
+  "market assumptions",
+  "roadmap decision",
+  "launch criteria",
+  "product experiment",
+  "go/no-go plan",
+]
+exclusions = [
+  "a small implementation task with already-defined requirements -- see software",
+  "a request whose actual goal is an answerable research question rather than a product decision -- see research",
+]
+
+[compatibility]
+min_platform_version = "1.0.0"
+
+[provides]
+rules = "product-management.toml"
+questions = "questions.toml"
+evidence_policy = "evidence-policy.toml"
+acceptance_templates = "acceptance-templates.toml"
+completion_gates = "completion-gates.toml"
+references = ["references/domain-guidance.md"]
+tests = "tests/scenarios.toml"
+
+[provenance]
+source = "groundspec built-in"
+license = "MIT"

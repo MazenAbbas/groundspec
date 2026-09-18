@@ -1,0 +1,70 @@
+# Reusable acceptance-criterion templates for product-management PRDs.
+# Never auto-injected into a contract -- an author (human or the Meta-Skill)
+# copies a template's fields into acceptance.criteria and fills in the
+# task-specific description, exactly like copying from an example. See
+# docs/pack-authoring-guide.md.
+domain_pack_schema_version = "0.1.0"
+pack_id = "product-management"
+
+[[templates]]
+id = "problem-clarity"
+description_template = "The problem statement is falsifiable and distinct from any proposed solution"
+default_priority = "must"
+default_verification_method = "manual_inspection"
+default_evidence_required = "A reviewer can state what evidence would contradict the problem statement, and confirm it is not a restatement of brief.goal."
+
+[[templates]]
+id = "target-user-specificity"
+description_template = "The target user/persona is specific enough to ground concrete design decisions, not a broad category"
+default_priority = "must"
+default_verification_method = "manual_inspection"
+default_evidence_required = "The persona names specific, decision-relevant attributes (not just a demographic label) and states whether it is researched or assumed."
+
+[[templates]]
+id = "scope-and-non-goals"
+description_template = "Scope and explicit non-goals are both stated"
+default_priority = "must"
+default_verification_method = "manual_inspection"
+default_evidence_required = "scope.non_goals is non-empty and each entry is specific to this request, not generic boilerplate."
+
+[[templates]]
+id = "measurable-success-metrics"
+description_template = "Success metrics are measurable within the stated success horizon, without imposing an arbitrary universal target value"
+default_priority = "must"
+default_verification_method = "manual_inspection"
+default_evidence_required = "Each metric names what would be measured, over what horizon, and whether any numeric target is sourced or a disclosed model-suggested starting point."
+
+[[templates]]
+id = "risk-register"
+description_template = "A risk register ranks assumptions/risks by impact and uncertainty"
+default_priority = "must"
+default_verification_method = "manual_inspection"
+default_evidence_required = "status.residual_risks is populated and ordered by materiality, not just a flat list."
+
+[[templates]]
+id = "validation-plan"
+description_template = "Every high-ranked risk maps to a concrete validation method"
+default_priority = "must"
+default_verification_method = "manual_inspection"
+default_evidence_required = "Each top-ranked residual risk names a specific validation method (a test, a user interview, a pilot metric) rather than being left as an unaddressed caveat."
+
+[[templates]]
+id = "traceable-user-decisions"
+description_template = "Decisions the user actually made are traceable to an answered open question, not indistinguishable from a model default"
+default_priority = "must"
+default_verification_method = "manual_inspection"
+default_evidence_required = "Every scope.open_questions entry with resolution_status 'answered' has a populated answer field, and the deliverable attributes that decision to the user."
+
+[[templates]]
+id = "evidence-labeling"
+description_template = "Every material factual claim in the PRD has a status.claim_ledger entry with an honest evidence_label"
+default_priority = "must"
+default_verification_method = "automated_test"
+default_evidence_required = "evidence.json's unmapped_material_claims and pm_unlabeled_material_claim_in_problem_statement are both empty/false."
+
+[[templates]]
+id = "authorization-compliance"
+description_template = "No external action (research, publishing, implementation) occurred beyond what routing.authorization actually granted"
+default_priority = "must"
+default_verification_method = "manual_inspection"
+default_evidence_required = "A review of the session's own tool-call record confirms every action taken was within routing.authorization.granted_permissions."

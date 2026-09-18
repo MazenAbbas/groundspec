@@ -1,0 +1,115 @@
+# Deterministic fixtures for `groundspec pack test data-science-ml`. See
+# product-management/tests/scenarios.toml's header for the same
+# evaluation_kind discipline.
+domain_pack_schema_version = "0.1.0"
+pack_id = "data-science-ml"
+
+[[scenarios]]
+id = "no-baseline-triggers-incomplete"
+description = "A performance claim with no baseline downgrades to INCOMPLETE."
+evaluation_kind = "deterministic"
+given_evidence = { ds_no_baseline_for_performance_claim = true }
+given_contract_fragment = {}
+expect_gates_triggered = ["no-baseline-for-performance-claim"]
+expect_gates_not_triggered = ["final-test-set-used-for-tuning"]
+
+[[scenarios]]
+id = "test-set-tuning-fails"
+description = "Using the final test set for tuning forces FAIL."
+evaluation_kind = "deterministic"
+given_evidence = { ds_final_test_set_used_for_tuning = true }
+given_contract_fragment = {}
+expect_gates_triggered = ["final-test-set-used-for-tuning"]
+expect_gates_not_triggered = []
+
+[[scenarios]]
+id = "unresolved-leakage-fails"
+description = "An unresolved leakage risk forces FAIL."
+evaluation_kind = "deterministic"
+given_evidence = { ds_unresolved_leakage_risk = true }
+given_contract_fragment = {}
+expect_gates_triggered = ["unresolved-leakage-risk"]
+expect_gates_not_triggered = []
+
+[[scenarios]]
+id = "dataset-provenance-unknown-incomplete"
+description = "Unknown dataset provenance downgrades to INCOMPLETE, not FAIL."
+evaluation_kind = "deterministic"
+given_evidence = { ds_dataset_provenance_unknown = true }
+given_contract_fragment = {}
+expect_gates_triggered = ["dataset-provenance-unknown"]
+expect_gates_not_triggered = ["final-test-set-used-for-tuning", "unresolved-leakage-risk"]
+
+[[scenarios]]
+id = "metric-mismatch-incomplete"
+description = "A metric mismatched to the decision objective downgrades to INCOMPLETE."
+evaluation_kind = "deterministic"
+given_evidence = { ds_metric_mismatched_to_objective = true }
+given_contract_fragment = {}
+expect_gates_triggered = ["metric-mismatched-to-objective"]
+expect_gates_not_triggered = []
+
+[[scenarios]]
+id = "production-claim-single-score-fails"
+description = "A production-readiness claim resting on one offline score forces FAIL."
+evaluation_kind = "deterministic"
+given_evidence = { ds_production_claim_single_offline_score = true }
+given_contract_fragment = {}
+expect_gates_triggered = ["production-claim-single-offline-score"]
+expect_gates_not_triggered = []
+
+[[scenarios]]
+id = "insufficient-reproducibility-incomplete"
+description = "Insufficient reproducibility information downgrades to INCOMPLETE."
+evaluation_kind = "deterministic"
+given_evidence = { ds_insufficient_reproducibility_info = true }
+given_contract_fragment = {}
+expect_gates_triggered = ["insufficient-reproducibility-info"]
+expect_gates_not_triggered = []
+
+[[scenarios]]
+id = "high-stakes-missing-review-fails"
+description = "A high-stakes deployment claim with no domain review forces FAIL."
+evaluation_kind = "deterministic"
+given_evidence = { ds_high_stakes_missing_domain_review = true }
+given_contract_fragment = {}
+expect_gates_triggered = ["high-stakes-missing-domain-review"]
+expect_gates_not_triggered = []
+
+[[scenarios]]
+id = "exploratory-disclosed-caveats-not-fail"
+description = "Honestly-disclosed exploratory gaps downgrade to caveats, never fail or incomplete."
+evaluation_kind = "deterministic"
+given_evidence = { ds_exploratory_missing_experiments_disclosed = true }
+given_contract_fragment = {}
+expect_gates_triggered = ["exploratory-work-honestly-scoped"]
+expect_gates_not_triggered = ["final-test-set-used-for-tuning", "unresolved-leakage-risk", "production-claim-single-offline-score"]
+
+[[scenarios]]
+id = "clean-run-triggers-nothing"
+description = "No ds_* flags set means no gates trigger."
+evaluation_kind = "deterministic"
+given_evidence = {}
+given_contract_fragment = {}
+expect_gates_triggered = []
+expect_gates_not_triggered = [
+  "no-baseline-for-performance-claim", "final-test-set-used-for-tuning", "unresolved-leakage-risk",
+  "dataset-provenance-unknown", "metric-mismatched-to-objective", "production-claim-single-offline-score",
+  "insufficient-reproducibility-info", "high-stakes-missing-domain-review", "exploratory-work-honestly-scoped",
+]
+
+[[scenarios]]
+id = "core-rules-apply-generally"
+description = "The prediction-target and acceptance-criteria rules apply as expected across completion states."
+evaluation_kind = "deterministic"
+given_evidence = {}
+given_contract_fragment = { status = { completion_status = "complete" } }
+expect_rules_apply = ["ds-prediction-target-distinct-from-modeling-approach", "ds-acceptance-criteria-measurable-evaluation", "ds-scope-states-non-goals"]
+
+[[scenarios]]
+id = "non-goals-rule-not-applicable-at-not-started"
+description = "The non-goals rule does not apply before the task has started."
+evaluation_kind = "deterministic"
+given_evidence = {}
+given_contract_fragment = { status = { completion_status = "not_started" } }
+expect_rules_not_apply = ["ds-scope-states-non-goals"]

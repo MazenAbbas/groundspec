@@ -1,0 +1,54 @@
+# Reusable acceptance-criterion templates for data-science-ml tasks. Never
+# auto-injected -- see product-management/acceptance-templates.toml's
+# header for the same disclaimer.
+domain_pack_schema_version = "0.1.0"
+pack_id = "data-science-ml"
+
+[[templates]]
+id = "evaluation-protocol-defined"
+description_template = "The evaluation protocol (metric, baseline, split strategy) is defined before -- not after -- looking at results"
+default_priority = "must"
+default_verification_method = "manual_inspection"
+default_evidence_required = "The protocol is recorded prior to the first reported result, with the metric justified against the decision's error-cost asymmetry."
+
+[[templates]]
+id = "split-and-leakage-check"
+description_template = "The split strategy matches the data's structure, and target/duplicate/temporal/entity leakage has been actively checked, not assumed absent"
+default_priority = "must"
+default_verification_method = "manual_inspection"
+default_evidence_required = "A stated split strategy (random/group/time/geography/source/user-level) with an explicit note on which leakage risks were checked and how."
+
+[[templates]]
+id = "baseline-comparison"
+description_template = "The reported result is compared against a stated, meaningful baseline"
+default_priority = "must"
+default_verification_method = "manual_inspection"
+default_evidence_required = "A named baseline (majority class, prior heuristic, simple model) with its own score reported alongside the new result."
+
+[[templates]]
+id = "reproducibility-record"
+description_template = "Enough information is recorded for another practitioner to reproduce the evaluation"
+default_priority = "should"
+default_verification_method = "manual_inspection"
+default_evidence_required = "Dataset version, split definition, seed, environment/dependency record, code revision, config, and the exact evaluation command are recorded, scaled to how much weight the claim carries."
+
+[[templates]]
+id = "error-analysis"
+description_template = "Failure modes and subgroup/rare-class performance are analyzed to the extent the task's risk warrants"
+default_priority = "should"
+default_verification_method = "manual_inspection"
+default_evidence_required = "A stated rationale for which error-analysis dimensions were and were not performed, proportional to intended use."
+
+[[templates]]
+id = "dataset-governance-disclosure"
+description_template = "Dataset provenance, license, consent basis, and intended-use restrictions are disclosed"
+default_priority = "must"
+default_verification_method = "manual_inspection"
+default_evidence_required = "A status.claim_ledger entry for dataset provenance, never asserted safe merely from public availability."
+
+[[templates]]
+id = "production-readiness-checklist"
+description_template = "A production-readiness claim is backed by evidence across evaluation, latency, monitoring, drift, rollback, input validation, and ownership -- not an offline score alone"
+default_priority = "must"
+default_verification_method = "automated_test"
+default_evidence_required = "evidence.json's ds_production_claim_single_offline_score is false, and each production-readiness dimension is addressed or explicitly disclosed as still open."

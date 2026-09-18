@@ -1,0 +1,55 @@
+# Completion gates: the mechanical extension point through which this pack
+# affects `groundspec evaluate`'s reported completion state, without any
+# code of its own running. Each condition is evaluated against
+# {"contract": <task contract>, "evidence": <evidence.json>} using the same
+# safe DSL rules already use (groundspec.rules.condition) -- see
+# docs/pack-authoring-guide.md's "completion gates" section for the exact
+# evidence.json field names an evaluator must populate honestly for these
+# to mean anything; the CLI cannot itself judge whether a claim is
+# unlabeled or a threshold is dressed up as a benchmark -- that is
+# unavoidably a model/human judgment call the pack only gates on, per this
+# project's deterministic/model-dependent boundary (see docs/architecture.md).
+domain_pack_schema_version = "0.1.0"
+pack_id = "product-management"
+
+[[gates]]
+id = "material-decision-silently-defaulted"
+description = "A materially outcome-changing product decision (geography, business model, monetization, launch scope, etc.) was defaulted without being recorded as a disclosed, classified open question."
+condition = { path = "evidence.pm_material_decision_silently_defaulted", op = "eq", value = true }
+on_violation = "downgrade_to_fail"
+rationale = "Silently defaulting a material decision is a violated instruction (never default what should be asked or disclosed), not merely an evidence gap -- see clarification-policy.md's 'illustrative anchor is not a decision' rule, which this pack's questions.toml applies to product scoping specifically."
+
+[[gates]]
+id = "unlabeled-material-claim-in-problem-statement"
+description = "The problem statement or market framing contains a material factual claim with no status.claim_ledger entry."
+condition = { path = "evidence.pm_unlabeled_material_claim_in_problem_statement", op = "eq", value = true }
+on_violation = "downgrade_to_incomplete"
+rationale = "Mirrors the core has_unmapped_material_claims gate (schema 0.4.0), made explicit for the pattern this pack exists to catch: an unsupported problem-statement premise, exactly like the Riyadh PRD regression report's student-budget claim."
+
+[[gates]]
+id = "market-wide-data-presented-as-segment-evidence"
+description = "A market-wide or general-population statistic is presented as if it specifically evidenced the target user segment's behavior or size."
+condition = { path = "evidence.pm_market_wide_data_presented_as_segment_evidence", op = "eq", value = true }
+on_violation = "downgrade_to_fail"
+rationale = "This is a misrepresentation of the evidence's actual scope, not an absence of evidence -- the data exists, it is just being applied to a claim it does not support."
+
+[[gates]]
+id = "model-threshold-presented-as-benchmark"
+description = "A model-generated or suggested product threshold (a target rate, a sample size, a conversion goal) is presented as if it were a sourced external benchmark."
+condition = { path = "evidence.pm_model_threshold_presented_as_benchmark", op = "eq", value = true }
+on_violation = "downgrade_to_fail"
+rationale = "Mislabeling MODEL_EVALUATED as sourced is exactly the defect schema 0.4.0's claim_ledger authority_level constraints were built to make structurally impossible for a claim_ledger entry -- this gate catches the same defect when it appears in the deliverable's prose instead of (or in addition to) the ledger."
+
+[[gates]]
+id = "critical-assumption-without-validation-plan"
+description = "A residual risk or assumption ranked as critical to the PRD's validity has no corresponding validation method identified."
+condition = { path = "evidence.pm_critical_assumption_without_validation_plan", op = "eq", value = true }
+on_violation = "downgrade_to_caveats"
+rationale = "An exploratory PRD that honestly flags a critical, not-yet-validated assumption is doing the right thing -- disclosure earns PASS_WITH_CAVEATS, not INCOMPLETE or FAIL, the same principle applied to data-science-ml's exploratory-work gate."
+
+[[gates]]
+id = "regulatory-claim-missing-evidence-classification"
+description = "A claim about legal, regulatory, medical, or financial feasibility has no evidence_label / authority classification at all."
+condition = { path = "evidence.pm_regulatory_claim_missing_evidence_classification", op = "eq", value = true }
+on_violation = "downgrade_to_incomplete"
+rationale = "Missing classification is a gap in evidence, not a proven-wrong claim -- consistent with schema 0.4.0's own INCOMPLETE-not-FAIL treatment of an unmapped material claim."

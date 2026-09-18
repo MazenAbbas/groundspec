@@ -1,0 +1,106 @@
+rule_pack_schema_version = "0.1.0"
+pack_id = "product-management"
+version = "0.1.0"
+layer = "domain"
+title = "Domain pack: product management"
+description = "PRD authoring, product discovery, MVP definition, and roadmap/launch decisions -- scoped to what a Task Contract's structure can actually check, not a substitute for user research, legal review, or business judgment. See docs/pack-authoring-guide.md and this pack's completion-gates.toml for the behavioral gates evidence.json feeds."
+provenance = { source = "groundspec built-in", license = "MIT" }
+imports = []
+
+[[rules]]
+id = "pm-problem-distinct-from-solution"
+version = "0.1.0"
+title = "The problem statement is not a restatement of the proposed solution"
+purpose = "Prevent a PRD from skipping straight to a feature description with no falsifiable problem behind it."
+scope = "Product-management tasks."
+applies_when = true
+severity = "hard_constraint"
+requirement = "brief.normalized_problem_statement must differ from brief.goal -- the problem is what is broken or missing; the goal is what will be built in response."
+verification_method = "manual_inspection"
+evidence_requirement = "The two fields are not restatements of each other and the problem statement is falsifiable (a reader could imagine evidence that would contradict it)."
+failure_behavior = "block_completion"
+source_or_rationale = "Product-management pack spec: 'distinguish problem evidence from solution preference.'"
+
+[[rules]]
+id = "pm-scope-states-non-goals"
+version = "0.1.0"
+title = "Scope explicitly states non-goals, not only goals"
+purpose = "Prevent scope creep by leaving 'what this is not' entirely implicit."
+scope = "Product-management tasks with a completion_status other than 'not_started'."
+applies_when = { path = "status.completion_status", op = "neq", value = "not_started" }
+severity = "hard_constraint"
+requirement = "scope.non_goals is non-empty -- a PRD that states no non-goals at all has not actually scoped anything."
+verification_method = "manual_inspection"
+evidence_requirement = "scope.non_goals lists at least one explicit exclusion relevant to this request."
+failure_behavior = "block_completion"
+source_or_rationale = "Product-management pack spec: acceptance template 'scope and non-goals.'"
+
+[[rules]]
+id = "pm-acceptance-criteria-measurable-success"
+version = "0.1.0"
+title = "Acceptance criteria exist and are not empty for anything past contract-only intent"
+purpose = "Prevent a PRD from having no way to check whether it succeeded."
+scope = "Product-management tasks whose intent is plan-and-execute."
+applies_when = { path = "status.completion_status", op = "in", value = ["partial", "complete"] }
+severity = "hard_constraint"
+requirement = "acceptance.criteria contains at least one 'must' criterion with a concrete verification_method."
+verification_method = "manual_inspection"
+evidence_requirement = "acceptance.criteria is non-empty and at least one entry has priority 'must'."
+failure_behavior = "block_completion"
+source_or_rationale = "Product-management pack spec: acceptance template 'measurable success metrics.'"
+
+[[rules]]
+id = "pm-residual-risk-and-uncertainty-populated"
+version = "0.1.0"
+title = "An incomplete or partial PRD names its own residual risk and remaining uncertainty"
+purpose = "Prevent a partial product plan from reading as if nothing were left unresolved."
+scope = "Product-management tasks with completion_status 'partial' or 'blocked'."
+applies_when = { path = "status.completion_status", op = "in", value = ["partial", "blocked"] }
+severity = "hard_constraint"
+requirement = "status.remaining_uncertainty and status.residual_risks are both non-empty."
+verification_method = "manual_inspection"
+evidence_requirement = "Both fields list at least one real, specific entry -- not a placeholder sentence."
+failure_behavior = "block_completion"
+source_or_rationale = "Product-management pack spec: acceptance template 'risk register' + core-invariants precedent."
+
+[[rules]]
+id = "pm-high-stakes-regulated-overlay"
+version = "0.1.0"
+title = "A regulated-context PRD carries the high_stakes_regulated overlay"
+purpose = "Ensure the mandatory disclosure/escalation hard constraints in risk-overlay-high-stakes-regulated actually apply when the PRD touches medical, legal, financial, or safety-consequential territory."
+scope = "Product-management tasks whose scope constraints mention a regulated context."
+applies_when = { path = "scope.constraints", op = "contains", value = "regulated" }
+severity = "advisory"
+requirement = "If any scope.constraints entry says this touches a regulated context, routing.risk_overlays should include high_stakes_regulated."
+verification_method = "manual_inspection"
+evidence_requirement = "A reviewer checks routing.risk_overlays against the stated regulated-context constraint."
+failure_behavior = "warn_only"
+source_or_rationale = "Product-management pack spec: 'regulated context' clarification dimension; this is advisory because the DSL cannot itself parse free-text constraints for 'is this actually regulated.'"
+
+[[rules]]
+id = "pm-assumptions-recorded-not-asserted"
+version = "0.1.0"
+title = "Persona, market, and scope inferences are recorded as assumptions, not asserted as fact"
+purpose = "Reuse the core separate-facts-from-assumptions invariant with a product-management-specific reminder, since PRDs are especially prone to silently treating a persona sketch or market guess as given."
+scope = "Product-management tasks."
+applies_when = true
+severity = "soft_objective"
+requirement = "Any persona, market-size, or user-behavior claim not backed by status.claim_ledger is recorded in scope.assumptions, never asserted as an unlabeled fact in the deliverable."
+verification_method = "manual_inspection"
+evidence_requirement = "Cross-check each such claim against scope.assumptions or status.claim_ledger."
+failure_behavior = "downgrade_score"
+source_or_rationale = "Product-management pack spec: 'distinguish user decisions from model recommendations' + core-invariants:separate-facts-from-assumptions."
+
+[[rules]]
+id = "pm-traceable-user-decisions"
+version = "0.1.0"
+title = "User-made decisions are traceable to an answered open question, not folded into prose"
+purpose = "Prevent a PRD from presenting a user's actual decision indistinguishably from the model's own default."
+scope = "Product-management tasks with at least one answered open question."
+applies_when = { path = "scope.open_questions", op = "neq", value = [] }
+severity = "soft_objective"
+requirement = "Every scope.open_questions entry with resolution_status 'answered' has a non-empty answer field, and the deliverable attributes that decision to the user rather than presenting it as the model's own judgment."
+verification_method = "manual_inspection"
+evidence_requirement = "Each answered question's answer field is populated and the PRD text is consistent with it being a user decision."
+failure_behavior = "downgrade_score"
+source_or_rationale = "Product-management pack spec: acceptance template 'traceable user decisions.'"

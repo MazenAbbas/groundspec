@@ -1,0 +1,72 @@
+# Completion gates for data-science-ml -- see product-management's
+# completion-gates.toml for the general mechanism this relies on
+# (groundspec.packs.sdk.gates), and docs/pack-authoring-guide.md for the
+# exact evidence.json field names an evaluator must populate honestly.
+# The CLI cannot itself run an experiment, detect leakage, or judge
+# whether a metric matches a decision objective -- these gates only ever
+# gate on a human/model-supplied boolean, never compute one.
+domain_pack_schema_version = "0.1.0"
+pack_id = "data-science-ml"
+
+[[gates]]
+id = "no-baseline-for-performance-claim"
+description = "A model-performance claim exists with no meaningful baseline to compare against."
+condition = { path = "evidence.ds_no_baseline_for_performance_claim", op = "eq", value = true }
+on_violation = "downgrade_to_incomplete"
+rationale = "An unbenchmarked score is not evidence of quality -- it is a missing comparison, matching this pack's 'do not accept accuracy automatically for every classification task' requirement."
+
+[[gates]]
+id = "final-test-set-used-for-tuning"
+description = "The held-out final test set was used during model/hyperparameter selection, not reserved purely for final evaluation."
+condition = { path = "evidence.ds_final_test_set_used_for_tuning", op = "eq", value = true }
+on_violation = "downgrade_to_fail"
+rationale = "This is a methodological violation that invalidates the reported score's meaning, not merely missing evidence -- the reported number is actively misleading, not just unproven."
+
+[[gates]]
+id = "unresolved-leakage-risk"
+description = "A plausible leakage risk (target leakage, duplicate/entity overlap, temporal look-ahead, preprocessing fit on the full dataset, post-outcome features) was identified and not resolved or ruled out."
+condition = { path = "evidence.ds_unresolved_leakage_risk", op = "eq", value = true }
+on_violation = "downgrade_to_fail"
+rationale = "An unresolved leakage risk means the reported performance cannot be trusted at all, not just that it lacks a caveat."
+
+[[gates]]
+id = "dataset-provenance-unknown"
+description = "The dataset's origin, collection method, license, consent basis, or intended-use restrictions are materially unknown."
+condition = { path = "evidence.ds_dataset_provenance_unknown", op = "eq", value = true }
+on_violation = "downgrade_to_incomplete"
+rationale = "Missing provenance is a gap in what's known, not a proven-wrong claim -- 'publicly accessible' is never itself evidence of legal/ethical safety, per this pack's data-governance requirement."
+
+[[gates]]
+id = "metric-mismatched-to-objective"
+description = "The selected primary metric does not align with the actual decision's error-cost asymmetry (e.g. plain accuracy on a severely imbalanced fraud-detection task)."
+condition = { path = "evidence.ds_metric_mismatched_to_objective", op = "eq", value = true }
+on_violation = "downgrade_to_incomplete"
+rationale = "A mismatched metric can make a genuinely poor model look good -- this is an evidence-adequacy gap, not by itself proof the model is bad."
+
+[[gates]]
+id = "production-claim-single-offline-score"
+description = "A production-readiness claim relies only on one offline evaluation score, with no latency/resource/monitoring/drift/rollback/input-validation/ownership evidence."
+condition = { path = "evidence.ds_production_claim_single_offline_score", op = "eq", value = true }
+on_violation = "downgrade_to_fail"
+rationale = "An offline score alone cannot establish production readiness -- asserting it anyway is a claim not supported by the evidence actually presented, not merely an incomplete claim."
+
+[[gates]]
+id = "insufficient-reproducibility-info"
+description = "Reported results lack enough information (dataset version, split definition, seed, environment, code revision, config, evaluation command) for another practitioner to reproduce them."
+condition = { path = "evidence.ds_insufficient_reproducibility_info", op = "eq", value = true }
+on_violation = "downgrade_to_incomplete"
+rationale = "Missing reproducibility information is a gap in the evidence record, distinct from the result being wrong."
+
+[[gates]]
+id = "high-stakes-missing-domain-review"
+description = "A high-stakes deployment (medical, financial, safety-consequential, or otherwise regulated) is claimed ready without the required professional/domain review."
+condition = { path = "evidence.ds_high_stakes_missing_domain_review", op = "eq", value = true }
+on_violation = "downgrade_to_fail"
+rationale = "Claiming readiness for a high-stakes deployment without the domain review this pack requires is a violated instruction, not just missing evidence -- mirrors product-management's silently-defaulted-material-decision gate."
+
+[[gates]]
+id = "exploratory-work-honestly-scoped"
+description = "The deliverable is exploratory (not claiming final model quality) and honestly identifies which experiments are still missing."
+condition = { path = "evidence.ds_exploratory_missing_experiments_disclosed", op = "eq", value = true }
+on_violation = "downgrade_to_caveats"
+rationale = "Exploratory work that honestly discloses its own gaps is doing the right thing -- disclosure earns PASS_WITH_CAVEATS, not INCOMPLETE or FAIL, mirroring product-management's critical-assumption-without-validation-plan gate."

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "groundspec"
-version = "0.2.0rc3"
+version = "0.3.0rc1.dev0"
 description = "A requirements compiler and verification framework that turns an incomplete AI-task request into an executable, auditable Task Contract."
 readme = "README.md"
 license = "MIT"
