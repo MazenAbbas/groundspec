@@ -1,0 +1,657 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:groundspec:schema:task-contract:0.4.0",
+  "title": "Task Contract",
+  "description": "Vendor-neutral, versioned contract that turns an incomplete AI-task request into an executable, auditable specification. See docs/schema-reference.md for field-by-field rationale.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_schema_version",
+    "task_id",
+    "brief",
+    "scope",
+    "routing",
+    "quality",
+    "acceptance",
+    "budget",
+    "control",
+    "status"
+  ],
+  "properties": {
+    "contract_schema_version": {
+      "const": "0.4.0",
+      "description": "Schema version this document conforms to. Never silently upgraded by tooling."
+    },
+    "task_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{2,63}$",
+      "description": "Stable, human-readable slug identifying this task. Not a UUID: must be legible in filenames and logs."
+    },
+    "brief": { "$ref": "#/$defs/brief" },
+    "scope": { "$ref": "#/$defs/scope" },
+    "routing": { "$ref": "#/$defs/routing" },
+    "quality": { "$ref": "#/$defs/quality" },
+    "acceptance": { "$ref": "#/$defs/acceptance" },
+    "budget": { "$ref": "#/$defs/budget" },
+    "control": { "$ref": "#/$defs/control" },
+    "status": { "$ref": "#/$defs/status" }
+  },
+  "$defs": {
+    "brief": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw_user_brief", "normalized_problem_statement", "goal", "target_users"],
+      "properties": {
+        "raw_user_brief": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20000,
+          "description": "The user's original request, verbatim. Never edited by tooling; preserved for audit."
+        },
+        "normalized_problem_statement": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000,
+          "description": "A restatement of the problem in unambiguous terms. Distinct from the goal: this is what is wrong or needed, not what will be done."
+        },
+        "goal": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "The single measurable outcome this task is meant to produce."
+        },
+        "target_users": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 300 },
+          "minItems": 1,
+          "maxItems": 20,
+          "description": "Who benefits from or is affected by this task."
+        },
+        "context": {
+          "type": "string",
+          "maxLength": 8000,
+          "default": "",
+          "description": "Background the executor needs but that is not itself a requirement (prior decisions, environment, history)."
+        },
+        "inputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/named_item" },
+          "default": [],
+          "maxItems": 100,
+          "description": "Materials, data, or access the executor starts with."
+        },
+        "expected_deliverables": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/deliverable" },
+          "minItems": 1,
+          "maxItems": 50,
+          "description": "What must exist when the task is done."
+        }
+      }
+    },
+    "named_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "description"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "source": { "type": "string", "maxLength": 500, "default": "" }
+      }
+    },
+    "deliverable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "description"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "format": { "type": "string", "maxLength": 200, "default": "" }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["constraints", "non_goals", "assumptions", "open_questions"],
+      "properties": {
+        "constraints": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 1000 },
+          "default": [],
+          "maxItems": 100
+        },
+        "non_goals": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 1000 },
+          "default": [],
+          "maxItems": 100,
+          "description": "What this task explicitly will NOT attempt, to prevent scope creep."
+        },
+        "assumptions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/assumption" },
+          "default": [],
+          "maxItems": 100
+        },
+        "open_questions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/open_question" },
+          "default": [],
+          "maxItems": 100
+        }
+      }
+    },
+    "assumption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement", "confidence"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "confidence": { "enum": ["low", "medium", "high"] },
+        "safe_default": {
+          "const": true,
+          "default": true,
+          "description": "Always true (new in schema 0.3.0, was a plain boolean in 0.1.0/0.2.0): recording something in scope.assumptions is itself a claim that defaulting it was safe. An item that is not safe to default must be recorded as an open_question (blocking or high_value) instead of an assumption -- it may not be smuggled in here with safe_default set to false."
+        }
+      }
+    },
+    "open_question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["question", "classification", "resolution_status"],
+      "properties": {
+        "question": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "classification": {
+          "enum": ["blocking", "high_value", "important_defaultable", "optional"],
+          "description": "blocking = no useful progress without an answer. high_value = not strictly blocking, but the answer would materially change the deliverable and no safe default exists -- worth asking if the clarification budget allows. important_defaultable = a safe default exists. optional = does not materially change the deliverable. (high_value is new in schema 0.2.0+; a 0.1.0 document never uses it.)"
+        },
+        "resolution_status": {
+          "enum": ["open", "answered", "defaulted"],
+          "default": "open"
+        },
+        "default_applied": { "type": "string", "maxLength": 1000, "default": "" },
+        "answer": { "type": "string", "maxLength": 2000, "default": "" }
+      }
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain_packs", "risk_overlays", "risk_level", "authorization"],
+      "properties": {
+        "domain_packs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/pack_reference" },
+          "default": [],
+          "maxItems": 20
+        },
+        "risk_overlays": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "informational",
+              "external_communication",
+              "filesystem_mutation",
+              "destructive_irreversible",
+              "security_sensitive",
+              "high_stakes_regulated",
+              "personal_data"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "Every overlay that applies. 'informational' alone means low-risk read/produce-only work."
+        },
+        "risk_level": {
+          "enum": ["low", "medium", "high", "critical"],
+          "description": "Overall gating level derived from the highest-severity overlay present."
+        },
+        "authorization": { "$ref": "#/$defs/authorization" }
+      }
+    },
+    "pack_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pack_id", "version"],
+      "properties": {
+        "pack_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{1,63}$" },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" }
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["granted_permissions", "boundaries", "requires_confirmation_for"],
+      "properties": {
+        "granted_permissions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 300 },
+          "default": [],
+          "maxItems": 50,
+          "description": "Actions the user has actually authorized for this task. Never inferred."
+        },
+        "boundaries": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 300 },
+          "default": [],
+          "maxItems": 50,
+          "description": "Explicit limits on granted permissions (e.g. 'read-only outside ./output')."
+        },
+        "requires_confirmation_for": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 300 },
+          "default": [],
+          "maxItems": 50,
+          "description": "Action categories that must be confirmed with the user before execution, regardless of budget pressure."
+        }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hard_constraints", "soft_objectives"],
+      "properties": {
+        "hard_constraints": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hard_constraint" },
+          "default": [],
+          "maxItems": 100,
+          "description": "Binary pass/fail gates. A single violation blocks completion regardless of soft score."
+        },
+        "soft_objectives": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/soft_objective" },
+          "default": [],
+          "maxItems": 50,
+          "description": "Weighted, improvable quality dimensions. Never capable of overriding a hard constraint."
+        }
+      }
+    },
+    "hard_constraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{1,63}$" },
+        "description": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "rule_ref": { "type": "string", "maxLength": 200, "default": "" },
+        "rationale": { "type": "string", "maxLength": 1000, "default": "" }
+      }
+    },
+    "soft_objective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dimension", "weight"],
+      "properties": {
+        "dimension": {
+          "enum": [
+            "correctness",
+            "requirement_coverage",
+            "evidence_quality",
+            "usability",
+            "clarity",
+            "maintainability",
+            "efficiency",
+            "uncertainty_handling",
+            "scope_discipline",
+            "unsupported_claims",
+            "acceptance_criteria_completeness",
+            "resource_overrun"
+          ]
+        },
+        "weight": { "type": "number", "minimum": 0, "maximum": 1 },
+        "rationale": { "type": "string", "maxLength": 500, "default": "" },
+        "source": {
+          "enum": ["default", "domain_pack", "user_override"],
+          "default": "default"
+        }
+      }
+    },
+    "acceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["criteria"],
+      "properties": {
+        "criteria": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/criterion" },
+          "minItems": 0,
+          "maxItems": 100
+        }
+      }
+    },
+    "criterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "priority", "verification_method", "evidence_required"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{1,63}$" },
+        "description": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "priority": { "enum": ["must", "should", "could"], "default": "must" },
+        "verification_method": {
+          "enum": [
+            "automated_test",
+            "manual_inspection",
+            "user_confirmation",
+            "external_reference_check",
+            "reproducible_command",
+            "static_analysis",
+            "other"
+          ]
+        },
+        "evidence_required": { "type": "string", "minLength": 1, "maxLength": 1000 }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "time_budget_minutes",
+        "max_clarification_questions",
+        "max_planning_iterations",
+        "max_execution_iterations",
+        "tool_call_budget",
+        "research_depth",
+        "reserved_verification_fraction"
+      ],
+      "properties": {
+        "time_budget_minutes": { "type": "integer", "minimum": 0 },
+        "max_clarification_questions": { "type": "integer", "minimum": 0, "maximum": 50 },
+        "max_planning_iterations": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "max_execution_iterations": { "type": "integer", "minimum": 0, "maximum": 100000 },
+        "tool_call_budget": { "type": "integer", "minimum": 0, "maximum": 1000000 },
+        "research_depth": { "enum": ["none", "shallow", "standard", "deep"] },
+        "cost_budget": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/cost_budget_value" }
+          ],
+          "default": null
+        },
+        "reserved_verification_fraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.9,
+          "description": "Fraction of the total budget that may never be spent on anything but final verification."
+        }
+      }
+    },
+    "cost_budget_value": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unit", "amount"],
+      "properties": {
+        "unit": { "enum": ["tokens", "usd"] },
+        "amount": { "type": "number", "minimum": 0 }
+      }
+    },
+    "control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stop_conditions", "escalation_conditions"],
+      "properties": {
+        "stop_conditions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/condition" },
+          "default": [],
+          "maxItems": 50
+        },
+        "escalation_conditions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/condition" },
+          "default": [],
+          "maxItems": 50
+        }
+      }
+    },
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "trigger", "action"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{1,63}$" },
+        "trigger": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "action": { "type": "string", "minLength": 1, "maxLength": 500 }
+      }
+    },
+    "status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completion_status", "verified_facts", "unverified_claims", "remaining_uncertainty", "residual_risks", "omitted_work", "budget_expired"],
+      "properties": {
+        "completion_status": {
+          "enum": ["not_started", "in_progress", "partial", "complete", "blocked"],
+          "default": "not_started"
+        },
+        "verified_facts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidence_item" },
+          "default": [],
+          "maxItems": 500
+        },
+        "unverified_claims": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/unverified_claim" },
+          "default": [],
+          "maxItems": 500
+        },
+        "remaining_uncertainty": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 1000 },
+          "default": [],
+          "maxItems": 200
+        },
+        "residual_risks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/residual_risk" },
+          "default": [],
+          "maxItems": 200
+        },
+        "omitted_work": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 1000 },
+          "default": [],
+          "maxItems": 200
+        },
+        "budget_expired": { "type": "boolean", "default": false },
+        "claim_ledger": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/claim_record" },
+          "default": [],
+          "maxItems": 500,
+          "description": "New in schema 0.4.0. A structured provenance record for every material factual claim (one that affects the problem definition, market size, legal/regulatory or financial feasibility, risk severity, product scope, acceptance thresholds, or a go/no-go recommendation -- see docs/architecture.md). Distinct from verified_facts/unverified_claims: those are short status-report lines, this is the citable, reproducible evidence record behind a specific claim. A material claim with no corresponding entry here is what keeps completion_state below an unconditional PASS -- see groundspec.metaskill.completion.has_unmapped_material_claims."
+        }
+      }
+    },
+    "evidence_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement", "evidence_label"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "evidence_label": {
+          "enum": ["VERIFIED", "MEASURED", "SOURCE_VERIFIED", "USER_CONFIRMED", "HUMAN-REVIEWED"],
+          "description": "status.verified_facts may only use labels that mean some real, independent verification actually happened (new, narrower enum in schema 0.3.0: MODEL-EVALUATED/PROPOSED/PENDING_EXTERNAL_VALIDATION/OUT_OF_SCOPE were removed from here and moved to unverified_claim.evidence_label, since a self-review or a not-yet-checked item is not a verified fact). SOURCE_VERIFIED specifically requires that the cited source was actually opened and its relevant content examined -- a search-result snippet or index entry is not enough; use RESEARCH_NEEDED on an unverified_claim instead."
+        },
+        "source": { "type": "string", "maxLength": 500, "default": "" }
+      }
+    },
+    "unverified_claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement", "reason"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "evidence_label": {
+          "enum": ["MODEL-EVALUATED", "PROPOSED", "ASSUMPTION", "RESEARCH_NEEDED", "PENDING_EXTERNAL_VALIDATION", "OUT_OF_SCOPE"],
+          "description": "New in schema 0.3.0, optional. Labels a claim that is explicitly NOT independently verified: MODEL-EVALUATED (the executor's own judgment, never promoted to verified_facts), ASSUMPTION (a stated, recorded assumption, not evidence), RESEARCH_NEEDED (a bounded search found no suitable source -- never assert a source 'does not exist' from this alone), PROPOSED, PENDING_EXTERNAL_VALIDATION, or OUT_OF_SCOPE."
+        }
+      }
+    },
+    "residual_risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["risk", "severity"],
+      "properties": {
+        "risk": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "severity": { "enum": ["low", "medium", "high", "critical"] },
+        "mitigation": { "type": "string", "maxLength": 1000, "default": "" },
+        "affects_deliverable_validity": {
+          "type": "boolean",
+          "default": true,
+          "description": "New in schema 0.3.0. Whether this risk undermines the trustworthiness of the current deliverable itself, as opposed to being a legitimate finding *produced by* the requested exploration (e.g. 'we determined X is a risky assumption' as a research conclusion the user asked for). Defaults to true deliberately: a critical risk cannot silently avoid gating completion just because this field was left unset -- see groundspec.metaskill.completion and docs/architecture.md."
+        }
+      }
+    },
+    "claim_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_id", "claim", "evidence_label", "evaluator_type", "scope_and_qualifiers"],
+      "description": "New in schema 0.4.0. A single material factual claim's full provenance -- the canonical evidence record required by docs/architecture.md's material-claim policy. Fields irrelevant to a purely local, deterministic measurement (source_url, publisher, etc.) are optional and default to empty; they become required by the allOf rules below only when evidence_label actually claims a source was consulted.",
+      "properties": {
+        "claim_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]{1,63}$",
+          "description": "Stable slug for this claim, unique within the ledger. Referenced from acceptance criteria or residual risks when useful, but never required to be."
+        },
+        "claim": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "The exact claim, or a concise normalized restatement of it -- specific enough that a reviewer can tell exactly what is and is not being asserted."
+        },
+        "evidence_label": {
+          "enum": [
+            "MEASURED",
+            "PRIMARY_SOURCE_VERIFIED",
+            "SECONDARY_SOURCE_SUPPORTED",
+            "USER_CONFIRMED",
+            "MODEL_EVALUATED",
+            "ASSUMPTION",
+            "RESEARCH_NEEDED"
+          ],
+          "description": "MEASURED: a concrete local/deterministic measurement. PRIMARY_SOURCE_VERIFIED: an official/primary source was actually opened and its relevant content inspected, and it directly supports this exact claim including its qualifiers -- a search snippet, index page, inaccessible paper, or unopened report never qualifies. SECONDARY_SOURCE_SUPPORTED: a professional advisory article, reputable news report, or other non-primary source was actually opened and read, offered as context/provisional support only, never as final legal/regulatory/financial confirmation. USER_CONFIRMED: the user explicitly confirmed this themselves. MODEL_EVALUATED: the executor's own judgment/self-review -- never promotable to a stronger label. ASSUMPTION: a recorded, stated assumption, not evidence. RESEARCH_NEEDED: a bounded search found no suitable source; state the search's actual scope, never that no source exists."
+        },
+        "source_type": {
+          "enum": [
+            "government_body",
+            "statute_or_regulation",
+            "official_guidance",
+            "primary_document",
+            "professional_advisory",
+            "news_report",
+            "market_report",
+            "academic_paper",
+            "internal_measurement",
+            "user_statement",
+            "model_judgment",
+            "not_applicable"
+          ],
+          "default": "not_applicable"
+        },
+        "authority_level": {
+          "enum": ["primary_official", "secondary_professional", "secondary_general", "unofficial", "not_applicable"],
+          "default": "not_applicable",
+          "description": "Structurally tied to evidence_label by the allOf rules below -- a SECONDARY_SOURCE_SUPPORTED claim can never be marked primary_official, which is what makes 'secondary support presented as authoritative' a schema violation rather than just a style mistake."
+        },
+        "source_url": { "type": "string", "maxLength": 2000, "default": "" },
+        "source_title": { "type": "string", "maxLength": 500, "default": "" },
+        "publisher": { "type": "string", "maxLength": 300, "default": "" },
+        "publication_date": { "type": "string", "maxLength": 40, "default": "" },
+        "access_date": { "type": "string", "maxLength": 40, "default": "" },
+        "excerpt_or_locator": {
+          "type": "string",
+          "maxLength": 1500,
+          "default": "",
+          "description": "The exact supporting excerpt, or a precise section/page/clause locator -- not a citation to the document as a whole."
+        },
+        "scope_and_qualifiers": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1500,
+          "description": "Every condition, exception, jurisdiction limit, date, threshold, or supplier/scope boundary the source actually states, preserved here. A conditional source rule must never be rewritten as a universal one -- if the claim is genuinely unconditional, this field must say so explicitly (e.g. the literal text 'none; unconditional per the source'), never left to a vague or absent qualifier."
+        },
+        "evaluator_type": {
+          "enum": ["deterministic_tool", "human_reviewer", "ai_model", "user"],
+          "description": "Who/what produced this record -- distinct from evidence_label, which describes the evidence itself."
+        },
+        "limitations": {
+          "type": "string",
+          "maxLength": 1000,
+          "default": "",
+          "description": "What this evidence does NOT establish -- e.g. 'no primary regulatory source was inspected; official confirmation for this exact operating model remains required.'"
+        },
+        "affects": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "problem_definition",
+              "market_size",
+              "legal_or_regulatory_feasibility",
+              "financial_feasibility",
+              "risk_severity",
+              "product_scope",
+              "acceptance_thresholds",
+              "go_no_go_recommendation"
+            ]
+          },
+          "default": [],
+          "maxItems": 8,
+          "uniqueItems": true,
+          "description": "Which material dimensions this claim affects, if any (see docs/architecture.md). Empty means this record does not back a material claim."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "evidence_label": { "const": "PRIMARY_SOURCE_VERIFIED" } } },
+          "then": {
+            "required": ["source_url", "source_title", "access_date", "excerpt_or_locator", "source_type"],
+            "properties": {
+              "source_url": { "minLength": 1 },
+              "source_title": { "minLength": 1 },
+              "access_date": { "minLength": 1 },
+              "excerpt_or_locator": { "minLength": 1 },
+              "authority_level": { "const": "primary_official" },
+              "source_type": { "not": { "const": "not_applicable" } }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "evidence_label": { "const": "SECONDARY_SOURCE_SUPPORTED" } } },
+          "then": {
+            "required": ["source_url", "source_title", "access_date", "excerpt_or_locator", "source_type", "authority_level"],
+            "properties": {
+              "source_url": { "minLength": 1 },
+              "source_title": { "minLength": 1 },
+              "access_date": { "minLength": 1 },
+              "excerpt_or_locator": { "minLength": 1 },
+              "authority_level": { "enum": ["secondary_professional", "secondary_general"] },
+              "source_type": { "not": { "const": "not_applicable" } }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "evidence_label": { "const": "SECONDARY_SOURCE_SUPPORTED" },
+              "affects": { "contains": { "const": "legal_or_regulatory_feasibility" } }
+            },
+            "required": ["affects"]
+          },
+          "then": {
+            "required": ["limitations"],
+            "properties": { "limitations": { "minLength": 1 } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "evidence_label": { "enum": ["MEASURED", "USER_CONFIRMED", "MODEL_EVALUATED", "ASSUMPTION", "RESEARCH_NEEDED"] } }
+          },
+          "then": {
+            "properties": { "authority_level": { "const": "not_applicable" } }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,146 @@
+contract_schema_version = "0.4.0"
+task_id = "ksa-food-delivery-riyadh-corrected-run"
+[[acceptance.criteria]]
+description = "The pilot city/campus is either user-confirmed or an explicit placeholder, never silently promoted from an illustrative example"
+evidence_required = "scope.open_questions records the city/campus decision with resolution_status 'answered' or an explicit placeholder default"
+id = "pilot-city-confirmed-not-assumed"
+priority = "must"
+verification_method = "manual_inspection"
+[[acceptance.criteria]]
+description = "Every material factual claim in the PRD (problem statement, market size, regulatory feasibility, risk severity) has a status.claim_ledger entry"
+evidence_required = "evidence.json's unmapped_material_claims is empty"
+id = "material-claims-mapped-to-ledger"
+priority = "must"
+verification_method = "automated_test"
+[[acceptance.criteria]]
+description = "Conditional regulatory rules (e.g. ZATCA VAT deemed-supplier treatment) keep their actual conditions, never generalized to a universal rule"
+evidence_required = "the relevant claim_ledger entry's scope_and_qualifiers states the source's actual conditions"
+id = "regulatory-claims-preserve-conditions"
+priority = "must"
+verification_method = "manual_inspection"
+[[acceptance.criteria]]
+description = "No secondary source is recorded with primary/official authority"
+evidence_required = "no claim_ledger entry combines SECONDARY_SOURCE_SUPPORTED with authority_level primary_official (schema-enforced, re-verified here)"
+id = "no-secondary-source-presented-as-primary"
+priority = "must"
+verification_method = "automated_test"
+[brief]
+context = ""
+goal = "Produce a first-draft PRD for a university-student food-delivery pilot, with every material factual claim mapped to a claim-ledger entry at an honestly-labeled evidence strength, and the pilot city/campus confirmed rather than silently assumed."
+inputs = []
+normalized_problem_statement = "A first-draft PRD is needed for a single-city, single-campus-adjacent university-student food-delivery pilot. The specific city/campus was not named in the request and required clarification. Several claims about student budgets, competitor behavior, and regulatory treatment are directional and require disclosed evidence labels rather than being asserted as settled fact."
+raw_user_brief = "Create a PRD for a university-student food-delivery application in one city near one university."
+target_users = ["university students in the confirmed pilot city", "the founder"]
+[[brief.expected_deliverables]]
+description = "The PRD document"
+name = "prd"
+[budget]
+max_clarification_questions = 3
+max_execution_iterations = 20
+max_planning_iterations = 3
+research_depth = "shallow"
+reserved_verification_fraction = 0.15
+time_budget_minutes = 60
+tool_call_budget = 50
+[control]
+escalation_conditions = []
+stop_conditions = []
+[quality]
+hard_constraints = []
+soft_objectives = []
+[routing]
+risk_level = "medium"
+risk_overlays = ["informational"]
+[routing.authorization]
+boundaries = []
+granted_permissions = []
+requires_confirmation_for = []
+[[routing.domain_packs]]
+pack_id = "software"
+version = "0.1.0"
+[[routing.domain_packs]]
+pack_id = "research"
+version = "0.1.0"
+[scope]
+assumptions = []
+constraints = []
+non_goals = []
+[[scope.open_questions]]
+answer = "Riyadh, piloting near King Saud University -- confirmed by the user, not assumed by the Skill."
+classification = "high_value"
+question = "Which specific city and campus should the pilot target? A single city near one university was requested, but no specific city/campus was named."
+resolution_status = "answered"
+[[scope.open_questions]]
+classification = "high_value"
+default_applied = "Assumed standalone marketplace for this draft's scope, with partnership noted as an alternative worth researching later -- deferred under the clarification-question budget."
+question = "Standalone marketplace vs. university/merchant partnership for this draft?"
+resolution_status = "defaulted"
+[status]
+budget_expired = false
+completion_status = "partial"
+omitted_work = []
+remaining_uncertainty = ["Business model (standalone vs. partnership) remains an open, deferred question.", "Official/primary confirmation for the ZATCA VAT and rider-classification claims has not been obtained -- see status.claim_ledger."]
+[[status.claim_ledger]]
+affects = ["problem_definition"]
+claim = "Target university students have narrower discretionary budgets and more rigid daily schedules than the general urban population in the pilot city"
+claim_id = "student-budget-schedule"
+evaluator_type = "ai_model"
+evidence_label = "RESEARCH_NEEDED"
+scope_and_qualifiers = "Directional claim only; no specific figures asserted; not verified against local survey or spending data for this specific market."
+[[status.claim_ledger]]
+affects = ["market_size", "problem_definition"]
+claim = "Major food-delivery platforms operating in the pilot city do not specifically optimize pricing or scheduling for university-student budgets/schedules"
+claim_id = "competitor-gap"
+evaluator_type = "ai_model"
+evidence_label = "RESEARCH_NEEDED"
+scope_and_qualifiers = "No competitor app audit was performed this session; based on general familiarity only, not a systematic review."
+[[status.claim_ledger]]
+access_date = "2026-09-17"
+affects = ["legal_or_regulatory_feasibility", "risk_severity"]
+authority_level = "secondary_professional"
+claim = "Saudi ZATCA e-marketplace VAT deemed-supplier treatment may apply to this marketplace model"
+claim_id = "zatca-deemed-supplier"
+evaluator_type = "ai_model"
+evidence_label = "SECONDARY_SOURCE_SUPPORTED"
+excerpt_or_locator = "Section 3: deemed-supplier treatment applies to an electronic marketplace when the underlying supplier is a resident not registered for VAT, among other conditions."
+limitations = "No primary ZATCA regulation or official guidance document was inspected; official/professional confirmation for this exact operating model is still required before a build/launch decision."
+publisher = "Example Tax Advisory"
+scope_and_qualifiers = "Conditional: applies only to specific supplier categories (e.g. resident, non-VAT-registered suppliers) and other stated conditions -- does not apply to every marketplace or every supplier arrangement universally."
+source_title = "ZATCA e-marketplace VAT deemed-supplier guidance -- explainer"
+source_type = "professional_advisory"
+source_url = "https://example-tax-advisory.example/zatca-emarketplace-vat-guidance"
+[[status.claim_ledger]]
+access_date = "2026-09-17"
+affects = ["legal_or_regulatory_feasibility", "risk_severity"]
+authority_level = "secondary_general"
+claim = "Delivery riders under this model may face regulatory scrutiny over worker classification, per secondary reporting on gig-economy trends in Saudi Arabia"
+claim_id = "rider-employment-status"
+evaluator_type = "ai_model"
+evidence_label = "SECONDARY_SOURCE_SUPPORTED"
+excerpt_or_locator = "Paragraph 4: discusses general gig-economy worker classification debates in the region, not a specific ruling on this operating model."
+limitations = "The corresponding official regulatory source was not inspected; treat as an unconfirmed, disclosed risk, not a settled legal conclusion."
+publisher = "Example News"
+scope_and_qualifiers = "Based on secondary news reporting about general gig-economy classification trends, not a specific regulatory ruling on this exact operating model."
+source_title = "Coverage of gig-economy delivery rider classification trends in KSA"
+source_type = "news_report"
+source_url = "https://example-news.example/ksa-gig-economy-rider-classification"
+[[status.claim_ledger]]
+affects = ["acceptance_thresholds"]
+claim = "Suggested 15% trial-to-repeat conversion target for the pilot's first 90 days"
+claim_id = "conversion-target-threshold"
+evaluator_type = "ai_model"
+evidence_label = "MODEL_EVALUATED"
+scope_and_qualifiers = "none; a suggested internal target for this draft, not benchmarked against an external source."
+[[status.residual_risks]]
+affects_deliverable_validity = false
+mitigation = "Both claims are explicitly flagged in status.claim_ledger as requiring primary/official confirmation before this PRD is used for a build decision -- this is a disclosed limitation of a first-draft PRD, not a defect in the analysis performed."
+risk = "The ZATCA VAT deemed-supplier treatment and the rider-classification claim both rest on secondary sources only; if official guidance turns out to impose additional obligations, the compliance section of this PRD would need rework before a build/launch decision."
+severity = "critical"
+[[status.unverified_claims]]
+evidence_label = "ASSUMPTION"
+reason = "Deferred under the clarification-question budget; restated here for the report."
+statement = "Whether the standalone-marketplace business model outperforms a university/merchant partnership for this specific pilot."
+[[status.verified_facts]]
+evidence_label = "USER_CONFIRMED"
+source = "Direct user confirmation in this conversation."
+statement = "The pilot city and campus were explicitly confirmed by the user in this conversation."

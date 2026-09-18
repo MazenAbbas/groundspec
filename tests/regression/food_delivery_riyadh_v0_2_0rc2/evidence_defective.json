@@ -1,0 +1,15 @@
+{
+  "acceptance_criteria_results": {
+    "zatca-section-accurate": {
+      "evidence_label": "VERIFIED",
+      "met": true
+    }
+  },
+  "authorization_violations": [],
+  "dimension_scores": {},
+  "hard_constraint_results": {},
+  "unmapped_material_claims": [
+    "University students in Riyadh have narrower discretionary budgets and more rigid daily schedules than the general population (asserted in the problem statement with no evidence record of any kind).",
+    "Major food-delivery platforms do not specifically optimize for university-student needs (asserted with no evidence record of any kind)."
+  ]
+}
