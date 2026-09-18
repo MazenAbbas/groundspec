@@ -1,0 +1,30 @@
+domain_pack_schema_version = "0.1.0"
+pack_id = "software"
+version = "0.1.0"
+display_name = "Software and Product Development"
+description = "Building, changing, or reviewing code, CLIs, APIs, infrastructure, or a technical product."
+capabilities = ["code-review", "implementation-planning", "release-engineering"]
+supported_intents = ["plan-and-execute", "audit-existing"]
+
+[routing]
+triggers = [
+  "add a feature to an existing service",
+  "write a script",
+  "fix a bug",
+  "build an API endpoint",
+  "review this pull request",
+]
+exclusions = [
+  "a product discovery / PRD question with no implementation authorized yet -- see the product-management pack",
+]
+
+[compatibility]
+min_platform_version = "1.0.0"
+
+[provides]
+# This is a compatibility wrapper, not a rewrite: the actual rules are the
+# same domain-software.json file this pack has always shipped, byte-for-
+# byte unchanged, so every v0.1.0rc1-v0.2.0rc3 contract referencing
+# routing.domain_packs[].pack_id = "software" keeps resolving identically.
+# See docs/migration-guide-v0.3.md.
+rules = "domain-software.json"

@@ -14,6 +14,7 @@ import jsonschema
 from groundspec.contract.schema_loader import (
     UnsupportedSchemaVersion,
     load_contract_schema,
+    load_domain_pack_schema,
     load_rule_pack_schema,
 )
 
@@ -90,6 +91,26 @@ def validate_rule_pack_dict(data: object, *, version: str | None = None) -> list
         schema = load_rule_pack_schema(declared)
     except UnsupportedSchemaVersion as exc:
         return [ValidationIssue(path="rule_pack_schema_version", message=str(exc), schema_rule="version")]
+    return _collect(data, schema)
+
+
+def validate_domain_pack_dict(data: object, *, version: str | None = None) -> list[ValidationIssue]:
+    declared = version
+    if declared is None:
+        if isinstance(data, dict) and isinstance(data.get("domain_pack_schema_version"), str):
+            declared = data["domain_pack_schema_version"]
+        else:
+            return [
+                ValidationIssue(
+                    path="domain_pack_schema_version",
+                    message="missing or not a string; cannot select a schema to validate against",
+                    schema_rule="required",
+                )
+            ]
+    try:
+        schema = load_domain_pack_schema(declared)
+    except UnsupportedSchemaVersion as exc:
+        return [ValidationIssue(path="domain_pack_schema_version", message=str(exc), schema_rule="version")]
     return _collect(data, schema)
 
 

@@ -1,0 +1,23 @@
+domain_pack_schema_version = "0.1.0"
+pack_id = "content"
+version = "0.1.0"
+display_name = "Content and Marketing"
+description = "Writing or reviewing anything meant to be read by an external audience: posts, marketing copy, documentation for publication, announcements."
+capabilities = ["copywriting", "publication-review"]
+supported_intents = ["plan-and-execute", "audit-existing"]
+
+[routing]
+triggers = [
+  "write a launch post",
+  "draft marketing copy",
+  "audit this announcement for unsupported claims",
+]
+exclusions = []
+
+[compatibility]
+min_platform_version = "1.0.0"
+
+[provides]
+# Compatibility wrapper -- see packs/software/pack.toml's comment and
+# docs/migration-guide-v0.3.md. domain-content.json is unchanged.
+rules = "domain-content.json"
