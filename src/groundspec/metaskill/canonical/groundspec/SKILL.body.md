@@ -35,16 +35,21 @@ request
   -> intent and mode detection
   -> uncertainty classification (blocking / high-value / defaultable / optional)
   -> high-value clarification (bounded -- see references/clarification-policy.md)
+  -> propose Domain Pack(s) and risk overlay(s) (model-dependent -- see references/routing-and-risk.md)
+  -> Deterministic Pack Resolver (`groundspec pack resolve`): validates availability, versions,
+     dependencies, conflicts, and precedence for the proposed selection -- never the other way around
   -> Task Contract construction (via `groundspec create`, not hand-authored)
-  -> pack and risk routing (via references/routing-and-risk.md)
   -> deterministic validate/audit (`groundspec validate`, `groundspec audit`)
   -> contract preview when required (Guided mode, or any non-`informational` risk overlay)
   -> execution (bounded by the contract's own budget)
   -> evidence collection (concrete, checkable -- not narrative)
-  -> acceptance evaluation (`groundspec evaluate`, or the equivalent manual check)
+  -> acceptance evaluation (`groundspec evaluate`, or the equivalent manual check) -- includes any
+     completion gates the selected Domain Pack(s) contribute (see references/execution-and-verification.md)
   -> bounded revision (at most the contract's max_execution_iterations)
   -> final report with an explicit completion state
 ```
+
+**You propose which Domain Pack(s) fit a request; you never decide the composition is valid.** That is `groundspec pack resolve`'s job, deterministically -- it checks version compatibility, dependency closure, explicit conflicts, and cross-pack rule/gate collisions, and reports exactly what it found (see `references/routing-and-risk.md`). If it reports a conflict, report that conflict to the user rather than silently picking one pack over another or silently dropping one.
 
 Full mechanics, including exact CLI invocations at each step: `references/task-contract-workflow.md`.
 
@@ -58,7 +63,8 @@ Report exactly one of: `PASS`, `PASS_WITH_CAVEATS`, `FAIL`, `INCOMPLETE`, `BLOCK
 - Full workflow + exact CLI commands: `references/task-contract-workflow.md`
 - Choosing risk overlays and domain packs: `references/routing-and-risk.md`
 - Evidence, acceptance evaluation, completion states, authorization gates: `references/execution-and-verification.md`
-- Domain-specific tips (load only the one that matches the request): `references/domain-guidance/software-and-product.md`, `references/domain-guidance/research-and-analysis.md`, `references/domain-guidance/content-and-marketing.md`
+- Domain-specific tips (load only the one that matches the request): `references/domain-guidance/software-and-product.md`, `references/domain-guidance/research-and-analysis.md`, `references/domain-guidance/content-and-marketing.md`, `references/domain-guidance/product-management.md`, `references/domain-guidance/data-science-ml.md`
+- Discovering, inspecting, or scaffolding a Domain Pack (including a project-local one): `references/pack-routing.md`
 
 ## Non-negotiables
 
@@ -69,3 +75,5 @@ Report exactly one of: `PASS`, `PASS_WITH_CAVEATS`, `FAIL`, `INCOMPLETE`, `BLOCK
 - Never let a critical residual risk, a weak-evidence 'must' criterion, or an unmapped material claim get waved through to `PASS` -- `references/execution-and-verification.md` defines exactly which conditions force `FAIL`/`INCOMPLETE` instead, and omitting a field to dodge a gate does not work (defaults are conservative by design).
 - Never hand-write or hand-edit the contract's TOML/JSON directly when a CLI command exists to do it.
 - Never re-invoke this Skill from within its own execution for the same task (e.g. because a sub-step "looks like" it needs scoping too). One invocation covers the whole state machine for one task; treat any apparent need to restart it mid-task as a signal to continue the current pass, not a reason to recurse.
+- Never claim that natural-language pack routing, semantic judgment, evidence interpretation, or professional advice is deterministic. Proposing Domain Pack(s) from a request's wording is exactly as model-dependent as everything else this Skill does with natural language -- the deterministic guarantee belongs to `groundspec pack resolve`/`validate`/`test`/`lock` and the completion-state machinery, never to the proposal step itself. Say so plainly if asked how a pack was chosen.
+- Never let an installed but unofficial (project- or user-local) pack silently shadow an official one with the same id. `groundspec pack resolve`/`lock` refuse this by default and require an explicit `--allow-shadow <pack-id>` -- surface that requirement to the user rather than passing the flag on your own judgment.
