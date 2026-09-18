@@ -201,3 +201,96 @@ The Meta-Skill (`groundspec skill export`, `src/groundspec/metaskill/`) adds its
 - **Asset:** a Skill that's actually usable once exported (no dangling reference, valid frontmatter).
 - **Existing mitigation:** `groundspec.metaskill.validate.validate_skill_files` checks frontmatter shape and that every `references/*.md` path mentioned anywhere in the file set actually exists in it; `groundspec skill export` refuses to write a Skill that fails this check (treated as a groundspec bug, not a user error); `groundspec skill validate <dir>` and `groundspec doctor` both re-run it independently of which vendor exporter produced the files.
 - **Test:** `tests/unit/test_metaskill_exports.py`.
+
+## Domain Pack extensibility (v0.3.0rc1)
+
+The Domain Pack SDK (`groundspec.packs.sdk`) treats every pack -- official, project-local, or user-local -- as **untrusted input until validated**, exactly like the pre-existing single-file rule pack. A pack is declarative data (a manifest plus TOML/JSON/Markdown content files); it cannot execute code, and nothing in this SDK ever runs, imports, or interprets pack content beyond parsing it as structured data or evaluating a condition through the same safe DSL rules already use (`groundspec.rules.condition`).
+
+### Malicious manifests
+
+- **Mitigation:** `pack.toml` is validated against `domain_pack.v0_1_0.schema.json` with `additionalProperties: false` everywhere and strict patterns on every identifier/version field (`groundspec.contract.validator.validate_domain_pack_dict`); a malformed manifest raises `PackManifestError` and the pack is never loaded.
+- **Test:** `tests/unit/test_pack_sdk_manifest.py`.
+
+### Path traversal (manifest `provides.*` references, and the pack directory scan itself)
+
+- **Mitigation:** `groundspec.packs.sdk.manifest._safe_join` resolves every `provides.*` path and rejects any that escapes the pack's own directory (`os.path.commonpath` check) before ever opening it; `groundspec.packs.sdk.safety.scan_pack_directory` independently performs the same check (`_check_no_traversal`) over every file actually found on disk, not just the ones the manifest references -- a file `provides` doesn't mention still has to pass the directory-wide scan.
+- **Test:** `tests/unit/test_pack_sdk_manifest.py::test_provides_reference_escaping_pack_dir_is_rejected`.
+
+### Archive traversal
+
+- **Mitigation:** not applicable by design -- a Domain Pack is a plain directory of individual files, never an archive. The safety scan rejects any file whose first bytes are a zip/archive magic number (`PK\x03\x04`) even if it carries an otherwise-allowed extension, so an archive cannot be smuggled in as if it were a data file either.
+
+### Symlinks and Windows junctions/reparse points
+
+- **Mitigation:** `scan_pack_directory` rejects any `path.is_symlink()` result unconditionally -- no symlink of any kind is permitted inside a pack directory.
+- **Remaining risk, stated honestly:** on Windows, `Path.is_symlink()` (Python 3.8+) reports `True` for a directory junction/reparse point in the environments this was tested in, but this project has not independently constructed and verified detection against every Windows reparse-point variant (creating one requires elevated privileges not available in this build's CI/dev environment -- the exact same limitation already noted for the pre-existing Skill-export symlink check). Treat this as believed-covered, not independently proven for every reparse-point type.
+- **Test:** `tests/unit/test_pack_sdk_safety.py::test_symlink_is_rejected` (skipped on Windows in this repo's own CI for the reason above -- see the skip reason in the test itself).
+
+### Oversized files and deeply nested structures
+
+- **Mitigation:** `MAX_FILE_BYTES` (1,000,000 bytes per file), `MAX_PACK_TOTAL_BYTES` (8,000,000 bytes per pack), `MAX_FILES_PER_PACK` (200), and `MAX_PATH_DEPTH` (8) are all enforced in `scan_pack_directory`, deterministically and before any file's content is trusted.
+- **Test:** `tests/unit/test_pack_sdk_safety.py` (oversized file, too many files, deeply nested directory).
+
+### Unicode-confusable IDs and control characters
+
+- **Mitigation:** `pack_id`, rule IDs, gate/question/policy/template IDs are all schema- or regex-constrained to `[a-z0-9_.-]`-family ASCII patterns -- there is no code point outside that set a confusable identifier could occupy. Separately, `scan_pack_directory`'s `_check_identifier_chars` rejects any file *path* containing a Unicode control or bidi-override character (categories `Cc`/`Cf`).
+- **Remaining risk:** free-text prose fields (a pack's `description`, `references/*.md` guidance body, a rule's `title`/`purpose`) are not scanned for control/bidi-override characters -- the existing project-wide "Terminal-control characters" threat-model entry covers this class of risk generically for any untrusted text Groundspec handles, including pack prose; it is not pack-specific and this SDK does not add a second, redundant check.
+- **Test:** `tests/unit/test_pack_sdk_safety.py::test_control_character_in_filename_is_rejected`.
+
+### Duplicate IDs (within a pack, and across a composition)
+
+- **Mitigation:** within one pack, the existing rule-pack loader's `_check_duplicate_rule_ids` (unchanged) and this SDK's own `content.py` loaders (`_check_unique_ids`) reject any duplicate ID at load time. Across a multi-pack composition, `groundspec.packs.sdk.resolver._check_cross_pack_rule_id_collisions` rejects a rule ID declared by two different packs, and `_check_completion_gate_collisions` classifies (rather than silently picks a winner for) two packs disagreeing on the same gate ID.
+- **Test:** `tests/unit/test_pack_sdk_resolver.py::test_cross_pack_duplicate_rule_id_raises`; this exact class of bug was caught for real during this release's own development (`product-management` and `data-science-ml` initially shared several rule IDs by accident, e.g. `scope-states-non-goals`) and fixed by pack-namespacing every rule ID (`pm-`/`ds-` prefixes) before release -- see the git history for this release.
+
+### Dependency cycles and excessive dependency depth
+
+- **Mitigation:** `resolver._resolve_one` tracks the current resolution stack and raises `PackDependencyCycleError` the instant a pack ID reappears in its own ancestry, and separately caps resolution depth at `MAX_DEPENDENCY_DEPTH` (8) as defense in depth against an acyclic but arbitrarily deep chain, mirroring the pre-existing rule-pack import-depth ceiling (`DEFAULT_MAX_IMPORT_DEPTH = 4`).
+- **A real bug found and fixed during development:** the first implementation marked a pack "selected" *before* recursing into its dependencies, which meant a two-pack cycle (A depends on B, B depends on A) was masked by the "already selected" fast path and never raised -- a direct-cycle test caught this (`test_dependency_cycle_raises` initially failed with "DID NOT RAISE"), and the fix reordered the cycle check to run before the memoization check. Documented here rather than only in a commit message, since it is exactly the kind of subtle correctness bug this threat-model section exists to take seriously.
+- **Test:** `tests/unit/test_pack_sdk_resolver.py::test_dependency_cycle_raises`, `::test_excessively_deep_dependency_chain_is_rejected`.
+
+### Version confusion and impossible/unsatisfied ranges
+
+- **Mitigation:** every version string is schema-constrained to strict `X.Y.Z` (no pre-release/build metadata, which would make range comparison ambiguous); `groundspec.packs.sdk.semver` does plain tuple comparison, nothing string-based; an impossible declared range (`min_version > max_version`) and an unsatisfied dependency range both raise `PackVersionRangeError` before any pack is treated as resolved.
+- **Test:** `tests/unit/test_pack_sdk_resolver.py::test_impossible_dependency_range_raises`, `::test_unsatisfied_dependency_version_range_raises`; `tests/unit/test_pack_sdk_misc.py`'s semver unit tests.
+
+### Official-pack shadowing
+
+- **Mitigation:** an unofficial (project- or user-local) pack declaring the same `pack_id` as an official one is never silently substituted -- `resolver.resolve` raises `PackCompositionInvalidError` unless the caller passes an explicit `--allow-shadow <pack-id>`, and even then the shadow is recorded as a visible, reported `ConflictReport`, never hidden. Precedence when shadowing is allowed is documented and deterministic (project > user > official).
+- **Test:** `tests/unit/test_pack_sdk_resolver.py::test_official_pack_cannot_be_silently_shadowed`, `::test_official_pack_can_be_shadowed_with_explicit_override`.
+
+### Prompt injection inside pack references
+
+- **Mitigation:** a pack's `references/*.md` guidance is exactly as untrusted as any other content this project already treats as data-not-instructions (the user's own brief, a referenced document, a rule pack being audited -- see `references/task-contract-workflow.md`'s "untrusted content" section and the "Prompt injection in the user brief"/"in uploaded documents" entries above). No new, pack-specific defense was added because none was needed: the existing rule applies without modification -- a pack's guidance text is read and reasoned about, never obeyed as an instruction.
+- **Remaining risk:** this is a behavioral/instructional control on the executing model, not something the deterministic CLI enforces at runtime, the same honestly-disclosed limitation already noted for prompt injection generally in this document.
+
+### Packs attempting to expand authorization
+
+- **Mitigation:** structurally impossible, not just discouraged -- neither the `domain_pack` schema, the `rule_pack` schema, nor the completion-gate condition DSL has any field or operation capable of writing into `routing.authorization` or otherwise granting a permission. A rule's `requirement` is prose text evaluated by a human/model reader, never executed; a completion gate can only ever downgrade a completion state (`apply_pack_gates` is monotonic -- see its own docstring and tests), never mark something as authorized. "Core invariants and explicit user authorization always outrank pack instructions" is stated in `SKILL.md`'s non-negotiables and is also true structurally: there is no code path from pack content to `routing.authorization`.
+- **Test:** `tests/unit/test_pack_sdk_misc.py`'s `apply_pack_gates` tests (monotonic-only-downgrade); the schema tests confirming `domain_pack`/`rule_pack` schemas reject unknown fields.
+
+### Executable payloads disguised as data
+
+- **Mitigation:** `scan_pack_directory` rejects a fixed list of executable/script extensions outright (`.py`, `.sh`, `.exe`, `.js`, `.ps1`, `.dll`, etc.), restricts allowed extensions to exactly `.toml`/`.md`/`.json`, and additionally inspects the first bytes of every allowed file for a shebang line or a native-executable/zip magic number -- so an executable cannot be smuggled in even under an allowed extension.
+- **Test:** `tests/unit/test_pack_sdk_safety.py` (forbidden extensions, shebang-disguised-as-toml, ELF-magic-disguised-as-md, zip-magic-disguised-as-json).
+
+### Unsafe URLs
+
+- **Remaining risk, not fully mitigated:** a pack's `references/*.md`, `questions.toml`, or `evidence-policy.toml` can contain any string, including a URL Groundspec never validates for safety (e.g. a lookalike domain). This is a lower-severity risk than it might first appear because **Groundspec itself never fetches or dereferences any URL** -- it has no network capability at all (see `docs/architecture.md`) -- so an unsafe URL in pack content is inert data unless a human or an external AI tool with its own network access chooses to follow it, at which point it is the same class of risk as any other untrusted-content link (the existing "Prompt injection in uploaded documents" mitigations already caution against acting on embedded instructions/links from untrusted sources).
+- **User/pack-author responsibility:** review a third-party pack's content the same way you would review any other untrusted document before trusting a link in it.
+
+### Denial of service through excessive rule/pack expansion
+
+- **Mitigation:** the pre-existing `rule_pack` schema already caps `rules` at 500 entries per pack and import depth at 4; this release adds `MAX_FILES_PER_PACK`/`MAX_PACK_TOTAL_BYTES`/`MAX_PATH_DEPTH` (above) and `MAX_DEPENDENCY_DEPTH` (8) at the Domain Pack composition level. `test_full_composition_resolves_quickly` guards against an accidental algorithmic regression (all five official packs must resolve in well under a second).
+
+### Disclosure of local paths or secrets in machine-readable reports
+
+- **Mitigation:** `groundspec pack inspect --json`, `pack resolve --json`, and `groundspec.lock` never include a real absolute filesystem path -- an official pack's "source" is the symbolic marker `official:<pack-id>`; a project/user pack's is a path relative to the project root (or a symbolic `<origin>:<name>` marker if it falls outside that root, e.g. a user-home pack). No pack-authored secret is ever read: the safety scan's allowed-extension list (`.toml`/`.md`/`.json`) and the SDK's own content loaders never read environment variables, credential files, or `.env`-shaped paths.
+- **Test:** `tests/unit/test_pack_sdk_misc.py::test_lock_never_contains_a_real_absolute_path`; `tests/integration/test_pack_cli.py::test_pack_inspect_json_report_has_no_absolute_paths`.
+
+### Lock-file tampering and enforcement
+
+- **Remaining risk, disclosed rather than hidden:** `groundspec.lock` is currently a **reproducibility record**, not yet an **enforcement mechanism** -- there is no `groundspec pack verify-lock` (or equivalent) command in this release that re-resolves a pack selection and fails if the result no longer matches a checked-in lock file's content hashes. A tampered or stale lock file is not currently detected automatically; a user who wants that guarantee today must re-run `pack resolve`/`pack lock` and diff the output themselves. This is a real, scoped-out-of-this-release gap, not a solved problem -- a natural candidate for the deferred-pack-backlog-adjacent future work list (see `docs/domain-pack-backlog.md`).
+
+### TOCTOU (time-of-check to time-of-use)
+
+- **Remaining risk:** the safety scan and the subsequent load of a pack's content happen as two separate filesystem passes, not atomically -- the same inherent limitation the pre-existing single-file rule-pack loader already has (see this document's "Path traversal" entry above). A pack directory that changes between `pack validate`'s scan and a later `pack resolve`'s load is a real, if narrow, window; mitigating it fully would require a different architecture (e.g. hashing and re-verifying immediately before every read), which this release does not implement.
