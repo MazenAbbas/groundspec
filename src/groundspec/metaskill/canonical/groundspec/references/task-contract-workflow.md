@@ -21,10 +21,13 @@ groundspec create --task-id <slug> \
   --user "<beneficiary 1>" [--user "<beneficiary 2>" ...] \
   --deliverable "<name>:<description>" [--deliverable ... ] \
   --risk-overlay <overlay> [--risk-overlay <overlay> ...] \
-  --domain <software|research|content> [--domain ...] \
+  --domain <software|research|content|product-management|data-science-ml> [--domain ...] \
   --risk-level <low|medium|high|critical> \
+  [--tool-call-budget <n>] [--time-budget-minutes <n>] \
   --out <slug>.toml
 ```
+
+When the user states a limit (for example "at most 15 tool calls"), pass it with `--tool-call-budget`/`--time-budget-minutes` so the contract records it from the start. Do not create with the defaults and leave the user's limit unrecorded.
 
 This produces a schema-valid skeleton with safe defaults. Then edit the generated file's `scope` (constraints/non_goals/assumptions/open_questions), `acceptance.criteria`, `budget`, and (once you have results -- see step 8) `status` sections to reflect what you actually determined -- editing a CLI-generated, already-valid file is not "hand-authoring," it's filling in fields the CLI left as explicit, documented defaults. `status` is not optional to fill in later: several hard constraints (`no-claiming-unperformed-work`, `report-limitations-and-uncertainty`, `evidence-based-completion`) require it to be populated before an honest `PASS` is possible. If you don't have file-editing tools available, describe the exact field values to the user or to whatever tool does have file access; do not fabricate a plausible-looking contract from memory instead of running `create`.
 
@@ -56,9 +59,15 @@ Quick mode on a genuinely low-risk, `informational`-only task may skip the previ
 
 Track against `budget.time_budget_minutes`, `max_execution_iterations`, and `tool_call_budget` as declared in the contract, not against ad hoc judgment. Respect `budget.reserved_verification_fraction` -- that slice is never spent on additional feature work, only on the verification step below, even under time pressure.
 
+**Check that a stated limit is feasible before starting, and record it.** When the user gives a limit (for example "at most 6 tool calls"), write it into the contract's `budget` when you create it (tightening the default is what they asked for), then estimate honestly whether it can cover the mandatory workflow: reading this Skill and its references, `pack resolve`, `create`, `validate`, `audit`, the actual work, and `evaluate`. If it plainly cannot, say so in your first message, before doing any of it, and ask for a workable limit or offer a reduced scope. Do not start and fail midway, and do not pack the whole workflow into a last few oversized calls: a single failed batch then leaves nothing verified. If you cannot ask, do the mandatory contract steps first, stay inside the limit, and report `INCOMPLETE` with what remains. **A tight limit never justifies skipping or reordering the contract steps:** `acceptance.criteria` must be filled in and `validate`/`audit` must pass before the first line of deliverable code is written (otherwise `core-invariants:define-completion-before-execution` fails and the run ends in `FAIL`). Spend calls on that first and cut deliverable scope or batch the *work* instead; do not save a call by postponing the criteria.
+
+**The budget is the user's limit, not yours.** When a limit is close to running out, do not edit the contract to raise it. Tell the user which limit is close and what remains, and either wait for their answer or finish the highest-value work inside the existing limit and record what was cut in `status.omitted_work`. Only change a limit after the user approves the specific new value, and record their approval next to it. If an environment problem (a missing package, a broken interpreter) blocks the plan, the same rule applies: use what is already available, or ask before any install -- never install first and disclose later. See `execution-and-verification.md`'s "Authorization" section.
+
 ## 8. Collect evidence -- concrete, not narrative
 
 For each `acceptance.criteria` entry, record a literal true/false result (did this specific, checkable thing happen or not), plus enough detail that a skeptical reader could check it. For each **material factual claim** in the deliverable (one affecting the problem definition, market size, legal/regulatory or financial feasibility, risk severity, product scope, an acceptance threshold, or a go/no-go recommendation), add a `[[status.claim_ledger]]` entry with an honest `evidence_label` -- see `execution-and-verification.md`'s "claim ledger" section for exactly what shape this takes and how it feeds `groundspec evaluate`.
+
+**Reconcile the contract with what actually happened, before evaluating.** If anything changed after you wrote the contract -- the user approved (or withdrew) network research, you dropped or added a domain pack, your evidence went from `RESEARCH_NEEDED` to sourced, a limit was extended with approval -- re-read every `acceptance.criteria` description, `scope.constraints`, `scope.non_goals`, and `routing.authorization.boundaries` entry, and rewrite any that now describe a situation that no longer holds (for example a criterion saying "no sourced-looking figures" after you added cited sources, or "no network access" after research was authorized). Edit through the CLI-supported flow, then re-run `groundspec validate`. A criterion marked `met` whose own text contradicts the deliverable is a defect even though `evaluate` cannot see it; this check is model judgment, not something the CLI verifies.
 
 ## 9. Evaluate acceptance and report a completion state
 
