@@ -145,11 +145,14 @@ For each piece of missing information, the question is: would the answer materia
 **Install and export the Meta-Skill into your AI tool:**
 
 ```bash
-pip install groundspec                                        # once published -- see Known limitations below
+python -m venv .venv && source .venv/bin/activate              # Windows PowerShell: py -3 -m venv .venv ; .\.venv\Scripts\Activate.ps1
+pip install https://github.com/MazenAbbas/groundspec/releases/download/v0.3.0rc2/groundspec-0.3.0rc2-py3-none-any.whl
 groundspec doctor                                              # confirm the install and bundled rule packs are healthy
 groundspec skill export --target claude-code --output .        # writes .claude/skills/groundspec/
 groundspec skill export --target codex --output .              # writes .agents/skills/groundspec/
 ```
+
+Groundspec is **not on PyPI yet**, so `pip install groundspec` will not work; install the wheel from the [Releases page](https://github.com/MazenAbbas/groundspec/releases) as above. These builds are prereleases, so GitHub does not mark them "Latest": open the Releases page and pick the newest `v0.3.x` entry, and replace the version in the URL. Each release ships a `SHA256SUMS.txt` you can check the download against.
 
 Then, in Claude Code, invoke it explicitly (`/groundspec use groundspec to study and plan a food-delivery application`) or just describe an ambiguous/multi-step/high-stakes task and let it activate automatically. In Codex, invoke it with `$groundspec` the same way. It will ask at most a few high-value questions, build and validate a real Task Contract behind the scenes (never asking you to write TOML), and report back a `PASS`/`PASS_WITH_CAVEATS`/`FAIL`/`INCOMPLETE`/`BLOCKED` completion state grounded in actual evidence -- see [Quick, Guided, and Audit modes](#quick-guided-and-audit-modes) above.
 
