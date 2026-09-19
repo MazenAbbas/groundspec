@@ -1,0 +1,26 @@
+domain_pack_schema_version = "0.1.0"
+pack_id = "research"
+version = "0.1.0"
+display_name = "Research and Analysis"
+description = "Answering a factual/evidentiary question, market or literature analysis, evaluating options against evidence."
+capabilities = ["evidence-synthesis", "comparative-analysis"]
+supported_intents = ["plan-and-execute", "audit-existing"]
+
+[routing]
+triggers = [
+  "does X exceed Y",
+  "compare these two options",
+  "literature review",
+  "market research",
+]
+exclusions = [
+  "a task that would only benefit from some supporting research, without the goal itself being an answerable research question -- see routing-and-risk.md",
+]
+
+[compatibility]
+min_platform_version = "1.0.0"
+
+[provides]
+# Compatibility wrapper -- see packs/software/pack.toml's comment and
+# docs/migration-guide-v0.3.md. domain-research.json is unchanged.
+rules = "domain-research.json"

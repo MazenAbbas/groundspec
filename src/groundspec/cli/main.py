@@ -4,7 +4,7 @@ import argparse
 from collections.abc import Sequence
 
 from groundspec.__about__ import __version__
-from groundspec.cli import commands
+from groundspec.cli import commands, pack_commands
 from groundspec.packs.registry import DOMAIN_PACK_IDS, RISK_OVERLAY_PACK_IDS
 
 
@@ -65,11 +65,58 @@ def build_parser() -> argparse.ArgumentParser:
     p_evaluate.add_argument("result_dir")
     p_evaluate.set_defaults(func=commands.cmd_evaluate)
 
-    p_pack = sub.add_parser("pack", help="Rule pack operations.")
+    p_pack = sub.add_parser("pack", help="Domain Pack SDK: discovery, validation, resolution, locking.")
     pack_sub = p_pack.add_subparsers(dest="pack_command", required=True)
-    p_pack_validate = pack_sub.add_parser("validate", help="Validate a single rule-pack file.")
+
+    p_pack_list = pack_sub.add_parser("list", help="List every discovered Domain Pack.")
+    p_pack_list.add_argument("--json", action="store_true", help="Machine-readable output.")
+    p_pack_list.set_defaults(func=pack_commands.cmd_pack_list)
+
+    p_pack_inspect = pack_sub.add_parser("inspect", help="Show full details for one Domain Pack.")
+    p_pack_inspect.add_argument("pack", help="A pack id, or a path to a pack directory / pack.toml.")
+    p_pack_inspect.add_argument("--json", action="store_true", help="Machine-readable output.")
+    p_pack_inspect.set_defaults(func=pack_commands.cmd_pack_inspect)
+
+    p_pack_init = pack_sub.add_parser("init", help="Scaffold the smallest valid new Domain Pack.")
+    p_pack_init.add_argument("pack_id")
+    p_pack_init.add_argument("--output", help="Directory to create <pack_id>/ under (default: '.').")
+    p_pack_init.add_argument("--force", action="store_true", help="Overwrite an existing directory.")
+    p_pack_init.set_defaults(func=pack_commands.cmd_pack_init)
+
+    p_pack_validate = pack_sub.add_parser(
+        "validate",
+        help="Validate a Domain Pack (directory/pack.toml/pack id) or a bare single-file rule pack.",
+    )
     p_pack_validate.add_argument("path")
-    p_pack_validate.set_defaults(func=commands.cmd_pack_validate)
+    p_pack_validate.set_defaults(func=pack_commands.cmd_pack_validate)
+
+    p_pack_resolve = pack_sub.add_parser(
+        "resolve", help="Deterministically resolve an explicit Domain Pack selection."
+    )
+    p_pack_resolve.add_argument(
+        "--pack", action="append", required=True, help="Repeatable: a pack id to select."
+    )
+    p_pack_resolve.add_argument(
+        "--allow-shadow", action="append", help="Repeatable: a pack id explicitly allowed to be shadowed."
+    )
+    p_pack_resolve.add_argument("--json", action="store_true", help="Machine-readable output.")
+    p_pack_resolve.set_defaults(func=pack_commands.cmd_pack_resolve)
+
+    p_pack_test = pack_sub.add_parser("test", help="Run a Domain Pack's own declarative test scenarios.")
+    p_pack_test.add_argument("path", help="A pack id, or a path to a pack directory / pack.toml.")
+    p_pack_test.set_defaults(func=pack_commands.cmd_pack_test)
+
+    p_pack_lock = pack_sub.add_parser(
+        "lock", help="Write a deterministic groundspec.lock for a pack selection."
+    )
+    p_pack_lock.add_argument(
+        "--pack", action="append", required=True, help="Repeatable: a pack id to select."
+    )
+    p_pack_lock.add_argument(
+        "--allow-shadow", action="append", help="Repeatable: a pack id explicitly allowed to be shadowed."
+    )
+    p_pack_lock.add_argument("--out", help="Output path (default: groundspec.lock).")
+    p_pack_lock.set_defaults(func=pack_commands.cmd_pack_lock)
 
     p_skill = sub.add_parser("skill", help="Groundspec Meta-Skill export and validation.")
     skill_sub = p_skill.add_subparsers(dest="skill_command", required=True)

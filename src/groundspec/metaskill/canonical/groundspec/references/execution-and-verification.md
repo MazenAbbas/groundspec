@@ -43,7 +43,9 @@ If you'd rather avoid the TOML array-of-tables ordering footgun below entirely, 
     "<criterion-id>": {"met": true, "evidence_label": "SOURCE_VERIFIED"}
   },
   "authorization_violations": [],
-  "unmapped_material_claims": []
+  "unmapped_material_claims": [],
+  "pm_material_decision_silently_defaulted": false,
+  "ds_unresolved_leakage_risk": false
 }
 ```
 
@@ -53,6 +55,7 @@ If you'd rather avoid the TOML array-of-tables ordering footgun below entirely, 
   **Which verification methods demand real evidence, and which accept a self-review:** `automated_test`, `reproducible_command`, `static_analysis`, and `external_reference_check` all demand real, independent evidence -- a weak label (`MODEL-EVALUATED`/`PROPOSED`/`ASSUMPTION`/`RESEARCH_NEEDED`) on one of these produces `INCOMPLETE`, not a silent `PASS` (see `test_model_evaluated_label_is_inadequate_for_automated_test_criterion`). `manual_inspection` and `user_confirmation`, by contrast, are *defined* as judgment-based -- a `MODEL-EVALUATED` label is the expected, adequate evidence for a `manual_inspection` criterion (it is what "the executor inspected and judged it" actually means), and this is treated as adequate, not weak. Two independent forward tests both had to infer this distinction because it wasn't spelled out before; do not assume `manual_inspection` demands the same evidence strength as `automated_test`.
 - `authorization_violations`: a list of plain-language descriptions of anything done that the contract's `routing.authorization` didn't actually permit. Empty list if none. Any non-empty list forces `FAIL` regardless of everything else -- see "Authorization" below.
 - `unmapped_material_claims` (new): a list of plain-language descriptions of material factual claims that appear in the deliverable but have **no** corresponding entry in `status.claim_ledger` -- see "The claim ledger" below. Empty list if every material claim you made has a ledger entry. Any non-empty list forces `INCOMPLETE` -- you don't get to assert a market-size number, a competitor-capability claim, or a regulatory conclusion with no evidence record behind it at all and still call the result done, even provisionally.
+- **Domain Pack completion-gate fields** (schema 0.4.0+ with the Domain Pack SDK): if `routing.domain_packs` selects a pack that declares its own `completion-gates.toml` (currently `product-management` and `data-science-ml`), populate the boolean fields it documents -- e.g. `pm_material_decision_silently_defaulted`, `ds_unresolved_leakage_risk` -- honestly. `groundspec evaluate` reads them, applies any triggered gate on top of the core completion state (a pack gate can only make the result *more* severe, never less), and prints each triggered gate's rationale. Find the exact field names for a given pack with `groundspec pack inspect <pack-id>` or that pack's own bundled guidance file -- never guess a field name; an unrecognized key is silently ignored (it evaluates to "not present," i.e. `false`-like), which is why getting the name exactly right matters for the gate to actually mean anything.
 
 ## Evidence taxonomy -- use the right label, every time
 

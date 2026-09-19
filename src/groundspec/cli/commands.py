@@ -43,9 +43,13 @@ from groundspec.packs.registry import (
     load_builtin,
     select_packs_for_contract,
 )
+from groundspec.packs.sdk.content import CompletionGate
+from groundspec.packs.sdk.discovery import discover_all
+from groundspec.packs.sdk.errors import PackSdkError
+from groundspec.packs.sdk.gates import apply_pack_gates, evaluate_gates
+from groundspec.packs.sdk.manifest import load_pack
 from groundspec.rules.errors import RulePackError
 from groundspec.rules.evaluator import applicable, evaluate_rule_set
-from groundspec.rules.pack_loader import load_pack_file, resolve_pack
 from groundspec.rules.precedence import build_rule_set
 from groundspec.scoring.rubric import score as score_rubric
 
@@ -265,6 +269,50 @@ def cmd_audit(args: object) -> int:
     return 0 if ok else 1
 
 
+def _collect_pack_completion_gates(contract: dict[str, object]) -> list[tuple[str, CompletionGate]]:
+    """Every completion gate contributed by a Domain Pack referenced in
+    routing.domain_packs, via the SDK (see groundspec.packs.sdk.gates).
+
+    Gracefully skips any pack_id the SDK cannot discover/load (e.g. a
+    project-level pack.toml that doesn't exist, or a bare pre-SDK rule-pack
+    reference with no manifest at all) -- this keeps `evaluate` fully
+    backward-compatible for contracts that only ever use the pre-SDK
+    single-file rule packs, which never had completion gates to begin
+    with and must not suddenly fail here.
+    """
+    routing = contract["routing"]
+    assert isinstance(routing, dict)
+    domain_packs = routing["domain_packs"]
+    assert isinstance(domain_packs, list)
+    requested_ids = {str(ref["pack_id"]) for ref in domain_packs}
+    if not requested_ids:
+        return []
+
+    gates: list[tuple[str, CompletionGate]] = []
+    for location in discover_all():
+        try:
+            manifest_pack_id = _peek_pack_id_quiet(location.pack_dir)
+        except PackSdkError:
+            continue
+        if manifest_pack_id not in requested_ids:
+            continue
+        try:
+            pack = load_pack(location.pack_dir, origin=location.origin)
+        except PackSdkError:
+            continue
+        gates.extend((pack.pack_id, gate) for gate in pack.completion_gates)
+    return gates
+
+
+def _peek_pack_id_quiet(pack_dir: Path) -> str:
+    from groundspec.packs.sdk.manifest import MANIFEST_FILENAME, load_manifest_dict
+
+    data = load_manifest_dict(pack_dir / MANIFEST_FILENAME)
+    pack_id = data["pack_id"]
+    assert isinstance(pack_id, str)
+    return pack_id
+
+
 def cmd_evaluate(args: object) -> int:
     contract = _load_contract_or_die(Path(args.contract))  # type: ignore[attr-defined]
     result_dir = Path(args.result_dir)  # type: ignore[attr-defined]
@@ -339,7 +387,18 @@ def cmd_evaluate(args: object) -> int:
             has_unmapped_material_claims=bool(unmapped_material_claims),
             has_disclosed_material_limitations=disclosed_material_limitations,
         )
+
+        pack_gates = _collect_pack_completion_gates(contract)
+        triggered_gates = evaluate_gates(pack_gates, contract=contract, evidence=evidence)
+        if triggered_gates:
+            state = apply_pack_gates(state, triggered_gates)
+
         print(f"Completion state: {state}")
+        for gate in triggered_gates:
+            print(
+                f"  [{gate.pack_id}:{gate.gate_id}] {gate.description} "
+                f"({gate.on_violation}) -- {gate.rationale}"
+            )
         if deferred_high_value:
             print("  note: at least one high-value clarification item was deferred/defaulted "
                   "rather than confirmed by the user")
@@ -361,20 +420,6 @@ def cmd_evaluate(args: object) -> int:
         return 0 if state in ("PASS", "PASS_WITH_CAVEATS") else 1
 
     return 0 if passed else 1
-
-
-def cmd_pack_validate(args: object) -> int:
-    path = Path(args.path)  # type: ignore[attr-defined]
-    try:
-        data = load_pack_file(path)
-        resolve_pack(path, search_dirs=[path.parent])
-    except (RulePackError, SchemaValidationError, UnknownFileFormat, FileNotFoundError) as exc:
-        print(f"{FAIL} {path}: {exc}", file=sys.stderr)
-        return 1
-    rules = data["rules"]
-    assert isinstance(rules, list)
-    print(f"{OK} {path}: pack {data['pack_id']!r} v{data['version']} ({len(rules)} rule(s)) is valid")
-    return 0
 
 
 def cmd_example(args: object) -> int:

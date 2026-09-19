@@ -1,0 +1,120 @@
+# Deterministic fixtures for `groundspec pack test product-management`.
+# Every scenario here is `evaluation_kind = "deterministic"`: it only
+# exercises the safe condition DSL against synthetic evidence/contract
+# fragments, never a real model or human judgment call. See
+# tests/eval/pm_data_science scenarios (repository-level) for the fuller,
+# live-model-involving forward-test corpus these deterministic fixtures
+# feed into.
+domain_pack_schema_version = "0.1.0"
+pack_id = "product-management"
+
+[[scenarios]]
+id = "silent-material-default-fails"
+description = "A silently-defaulted material decision (e.g. an undisclosed launch city) forces FAIL, not a caveated pass."
+evaluation_kind = "deterministic"
+given_evidence = { pm_material_decision_silently_defaulted = true }
+given_contract_fragment = {}
+expect_gates_triggered = ["material-decision-silently-defaulted"]
+expect_gates_not_triggered = ["unlabeled-material-claim-in-problem-statement"]
+
+[[scenarios]]
+id = "disclosed-default-does-not-trigger-silent-default-gate"
+description = "A disclosed default (the normal, correct path) never triggers the silent-default gate."
+evaluation_kind = "deterministic"
+given_evidence = { pm_material_decision_silently_defaulted = false }
+given_contract_fragment = {}
+expect_gates_triggered = []
+expect_gates_not_triggered = ["material-decision-silently-defaulted"]
+
+[[scenarios]]
+id = "unlabeled-material-claim-triggers-incomplete"
+description = "An unlabeled material claim in the problem statement triggers the INCOMPLETE-mapped gate."
+evaluation_kind = "deterministic"
+given_evidence = { pm_unlabeled_material_claim_in_problem_statement = true }
+given_contract_fragment = {}
+expect_gates_triggered = ["unlabeled-material-claim-in-problem-statement"]
+expect_gates_not_triggered = []
+
+[[scenarios]]
+id = "market-wide-data-as-segment-evidence-fails"
+description = "Presenting market-wide data as target-segment evidence forces FAIL."
+evaluation_kind = "deterministic"
+given_evidence = { pm_market_wide_data_presented_as_segment_evidence = true }
+given_contract_fragment = {}
+expect_gates_triggered = ["market-wide-data-presented-as-segment-evidence"]
+expect_gates_not_triggered = []
+
+[[scenarios]]
+id = "model-threshold-as-benchmark-fails"
+description = "Presenting a model-evaluated threshold as an external benchmark forces FAIL."
+evaluation_kind = "deterministic"
+given_evidence = { pm_model_threshold_presented_as_benchmark = true }
+given_contract_fragment = {}
+expect_gates_triggered = ["model-threshold-presented-as-benchmark"]
+expect_gates_not_triggered = []
+
+[[scenarios]]
+id = "critical-assumption-without-validation-plan-caveats-not-fails"
+description = "A critical assumption with no validation plan downgrades to caveats, honoring exploratory work rather than failing it outright."
+evaluation_kind = "deterministic"
+given_evidence = { pm_critical_assumption_without_validation_plan = true }
+given_contract_fragment = {}
+expect_gates_triggered = ["critical-assumption-without-validation-plan"]
+expect_gates_not_triggered = ["material-decision-silently-defaulted", "market-wide-data-presented-as-segment-evidence"]
+
+[[scenarios]]
+id = "regulatory-claim-missing-classification-incomplete"
+description = "A regulatory claim with no evidence classification downgrades to INCOMPLETE, not FAIL."
+evaluation_kind = "deterministic"
+given_evidence = { pm_regulatory_claim_missing_evidence_classification = true }
+given_contract_fragment = {}
+expect_gates_triggered = ["regulatory-claim-missing-evidence-classification"]
+expect_gates_not_triggered = []
+
+[[scenarios]]
+id = "clean-run-triggers-nothing"
+description = "A contract/evidence pair with none of the pm_* flags set triggers no gates at all."
+evaluation_kind = "deterministic"
+given_evidence = {}
+given_contract_fragment = {}
+expect_gates_triggered = []
+expect_gates_not_triggered = [
+  "material-decision-silently-defaulted",
+  "unlabeled-material-claim-in-problem-statement",
+  "market-wide-data-presented-as-segment-evidence",
+  "model-threshold-presented-as-benchmark",
+  "critical-assumption-without-validation-plan",
+  "regulatory-claim-missing-evidence-classification",
+]
+
+[[scenarios]]
+id = "problem-distinct-from-solution-rule-applies-generally"
+description = "The problem-distinct-from-solution rule applies to every product-management contract regardless of contract content."
+evaluation_kind = "deterministic"
+given_evidence = {}
+given_contract_fragment = {}
+expect_rules_apply = ["pm-problem-distinct-from-solution"]
+
+[[scenarios]]
+id = "acceptance-criteria-rule-applies-once-partial-or-complete"
+description = "The measurable-success acceptance-criteria rule applies once completion_status reaches partial/complete, not before."
+evaluation_kind = "deterministic"
+given_evidence = {}
+given_contract_fragment = { status = { completion_status = "complete" } }
+expect_rules_apply = ["pm-acceptance-criteria-measurable-success"]
+
+[[scenarios]]
+id = "scope-non-goals-rule-scoped-to-non-not-started"
+description = "The non-goals rule only applies once the task has moved past not_started."
+evaluation_kind = "deterministic"
+given_evidence = {}
+given_contract_fragment = { status = { completion_status = "not_started" } }
+expect_rules_not_apply = ["pm-scope-states-non-goals"]
+
+[[scenarios]]
+id = "scope-non-goals-rule-applies-when-partial"
+description = "The non-goals rule applies once the task is partial."
+evaluation_kind = "deterministic"
+given_evidence = {}
+given_contract_fragment = { status = { completion_status = "partial" } }
+expect_rules_apply = ["pm-scope-states-non-goals"]

@@ -1,0 +1,49 @@
+# Evidence-labeling policies for data-science-ml claims. These map
+# DS-specific evidence concepts (measured/reproduced/source-backed/
+# user-confirmed/model-evaluated/assumption/pending-experiment/unavailable)
+# onto the existing schema 0.4.0 claim_ledger evidence_label enum -- no new
+# labels are introduced. See docs/pack-authoring-guide.md.
+domain_pack_schema_version = "0.1.0"
+pack_id = "data-science-ml"
+
+[[policies]]
+id = "evidence-label-mapping"
+description = "How this pack's evidence concepts map onto the existing claim_ledger evidence_label enum."
+applies_to_claim_categories = ["acceptance_thresholds", "risk_severity"]
+guidance = "measured experiment result -> MEASURED. reproduced result (a second, independent run confirming the first) -> MEASURED, with scope_and_qualifiers noting it was independently reproduced. source-backed claim (a published benchmark/paper) -> PRIMARY_SOURCE_VERIFIED or SECONDARY_SOURCE_SUPPORTED per the usual authority rules. user-confirmed constraint -> USER_CONFIRMED. model-evaluated recommendation (a suggested threshold/approach) -> MODEL_EVALUATED. assumption -> ASSUMPTION. pending experiment (planned but not yet run) -> RESEARCH_NEEDED. unavailable evidence (cannot be obtained within this task's scope) -> RESEARCH_NEEDED with scope_and_qualifiers stating why."
+
+[[policies]]
+id = "dataset-provenance-and-governance"
+description = "A dataset's origin, collection method, license, consent basis, and intended-use restrictions are recorded, not assumed safe from public availability alone."
+applies_to_claim_categories = ["legal_or_regulatory_feasibility", "risk_severity"]
+guidance = "Record dataset provenance as its own status.claim_ledger entry. 'Publicly accessible' is never itself sufficient evidence of legal or ethical safety -- state what license/consent basis actually applies, or label RESEARCH_NEEDED if unknown."
+
+[[policies]]
+id = "split-strategy-appropriate-to-structure"
+description = "The train/test split strategy matches the data's actual structure (grouped, temporal, geographical, source-based, user-level), not a default random split applied without checking."
+applies_to_claim_categories = ["acceptance_thresholds"]
+guidance = "State the unit of analysis and the split strategy together. A single random split on grouped or temporal data is a leakage risk, not a neutral default -- see this pack's unresolved-leakage-risk completion gate."
+
+[[policies]]
+id = "baseline-and-metric-justified"
+description = "A model-performance claim states its baseline and justifies why the chosen primary metric matches the decision's actual error-cost asymmetry."
+applies_to_claim_categories = ["acceptance_thresholds", "go_no_go_recommendation"]
+guidance = "Never accept a bare 'accuracy: 94%' as sufficient -- state what it beats, and why accuracy (vs. precision/recall/F1/AUC/calibration) is the right primary metric for this decision's cost structure."
+
+[[policies]]
+id = "reproducibility-recorded"
+description = "Dataset version/hash, split definition, seed, environment, code revision, config, and evaluation command are recorded where relevant to the claim being made."
+applies_to_claim_categories = ["acceptance_thresholds"]
+guidance = "Scale the amount of reproducibility detail to how much weight the claim carries -- a quick exploratory sanity check needs less than a claim intended to justify a build/no-build or production decision. Never claim perfect reproducibility where real nondeterminism (e.g. GPU non-determinism, external API drift) remains -- disclose it instead."
+
+[[policies]]
+id = "error-analysis-scaled-to-risk"
+description = "Failure-category, subgroup, rare-class, calibration, and drift analysis are performed to the extent the task's actual risk and intended use warrant -- not maximally by default, and not skipped by default either."
+applies_to_claim_categories = ["risk_severity"]
+guidance = "A harmless toy classroom exercise does not need a full fairness audit; a model influencing a consequential real-world decision does. State which analyses were performed and which were judged unnecessary, and why."
+
+[[policies]]
+id = "production-readiness-is-multi-dimensional"
+description = "A production-readiness claim requires evidence across held-out evaluation, baseline comparison, latency, resource use, monitoring, drift, rollback, input validation, privacy/security, failure handling, ownership, and a retraining/update policy -- an offline score alone never establishes it."
+applies_to_claim_categories = ["go_no_go_recommendation", "risk_severity"]
+guidance = "List which of these dimensions have real evidence and which are still open; a claim resting on only one or two of these dimensions should be labeled accordingly (MODEL_EVALUATED/RESEARCH_NEEDED for the missing ones), not asserted as settled."

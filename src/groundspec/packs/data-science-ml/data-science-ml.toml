@@ -1,0 +1,106 @@
+rule_pack_schema_version = "0.1.0"
+pack_id = "data-science-ml"
+version = "0.1.0"
+layer = "domain"
+title = "Domain pack: data science and machine learning"
+description = "Classification, regression, clustering, recommendation, ranking, anomaly detection, time-series, CV, NLP, retrieval/RAG evaluation, model comparison, dataset preparation, exploratory modeling, and production-readiness review. Validates plans, contracts, evidence, and completion claims -- it does not train models itself, and adds no heavy runtime dependency (no pandas/NumPy/scikit-learn/PyTorch/TensorFlow/Jupyter). See this pack's completion-gates.toml for the behavioral gates evidence.json feeds."
+provenance = { source = "groundspec built-in", license = "MIT" }
+imports = []
+
+[[rules]]
+id = "ds-prediction-target-distinct-from-modeling-approach"
+version = "0.1.0"
+title = "The prediction target and decision it supports are stated before the modeling approach"
+purpose = "Prevent jumping to 'which model' before 'what decision does this prediction support, and what is actually being predicted.'"
+scope = "Data-science-ml tasks."
+applies_when = true
+severity = "hard_constraint"
+requirement = "brief.normalized_problem_statement must differ from brief.goal -- the problem is the decision/outcome this model would support; the goal is what will be built."
+verification_method = "manual_inspection"
+evidence_requirement = "The two fields are not restatements of each other, and the problem statement names a decision or outcome, not just a model type."
+failure_behavior = "block_completion"
+source_or_rationale = "Data-science-ml pack spec: 'decision or user outcome the model supports' clarification dimension."
+
+[[rules]]
+id = "ds-scope-states-non-goals"
+version = "0.1.0"
+title = "Scope explicitly states non-goals, not only goals"
+purpose = "Prevent scope creep -- e.g. silently expanding from an exploratory notebook into an implied production commitment."
+scope = "Data-science-ml tasks with a completion_status other than 'not_started'."
+applies_when = { path = "status.completion_status", op = "neq", value = "not_started" }
+severity = "hard_constraint"
+requirement = "scope.non_goals is non-empty."
+verification_method = "manual_inspection"
+evidence_requirement = "scope.non_goals lists at least one explicit exclusion (e.g. 'not a production deployment', 'not a fairness audit')."
+failure_behavior = "block_completion"
+source_or_rationale = "Data-science-ml pack spec: keep exploratory work honestly scoped."
+
+[[rules]]
+id = "ds-acceptance-criteria-measurable-evaluation"
+version = "0.1.0"
+title = "Acceptance criteria exist and include a concrete evaluation check"
+purpose = "Prevent a model task from having no way to check whether it actually worked."
+scope = "Data-science-ml tasks past contract-only intent."
+applies_when = { path = "status.completion_status", op = "in", value = ["partial", "complete"] }
+severity = "hard_constraint"
+requirement = "acceptance.criteria contains at least one 'must' criterion with a concrete verification_method."
+verification_method = "manual_inspection"
+evidence_requirement = "acceptance.criteria is non-empty and at least one entry has priority 'must'."
+failure_behavior = "block_completion"
+source_or_rationale = "Data-science-ml pack spec: acceptance template 'evaluation protocol defined.'"
+
+[[rules]]
+id = "ds-residual-risk-and-uncertainty-populated"
+version = "0.1.0"
+title = "An incomplete or partial modeling task names its own residual risk and remaining uncertainty"
+purpose = "Prevent exploratory or partial modeling work from reading as if nothing were left unresolved."
+scope = "Data-science-ml tasks with completion_status 'partial' or 'blocked'."
+applies_when = { path = "status.completion_status", op = "in", value = ["partial", "blocked"] }
+severity = "hard_constraint"
+requirement = "status.remaining_uncertainty and status.residual_risks are both non-empty."
+verification_method = "manual_inspection"
+evidence_requirement = "Both fields list at least one real, specific entry."
+failure_behavior = "block_completion"
+source_or_rationale = "Data-science-ml pack spec: 'allow exploratory work to pass with caveats when the deliverable honestly identifies missing experiments.'"
+
+[[rules]]
+id = "ds-personal-data-overlay"
+version = "0.1.0"
+title = "A dataset involving personal or sensitive data carries the personal_data overlay"
+purpose = "Ensure personal-data handling hard constraints actually apply when a dataset contains identifiable or sensitive information."
+scope = "Data-science-ml tasks whose scope constraints mention personal or sensitive data."
+applies_when = { path = "scope.constraints", op = "contains", value = "personal data" }
+severity = "advisory"
+requirement = "If any scope.constraints entry says the dataset contains personal/sensitive data, routing.risk_overlays should include personal_data."
+verification_method = "manual_inspection"
+evidence_requirement = "A reviewer checks routing.risk_overlays against the stated data-sensitivity constraint."
+failure_behavior = "warn_only"
+source_or_rationale = "Data-science-ml pack spec: 'no dataset may be described as legally or ethically safe merely because it is publicly accessible' -- this is advisory because the DSL cannot itself parse free-text constraints for 'is this actually sensitive.'"
+
+[[rules]]
+id = "ds-high-stakes-regulated-overlay-production"
+version = "0.1.0"
+title = "A production-readiness claim in a regulated or high-stakes domain carries the high_stakes_regulated overlay"
+purpose = "Ensure mandatory disclosure/escalation constraints apply before a model is claimed production-ready in medical, financial, safety, or similarly consequential territory."
+scope = "Data-science-ml tasks whose scope constraints mention a regulated or high-stakes deployment."
+applies_when = { path = "scope.constraints", op = "contains", value = "regulated deployment" }
+severity = "advisory"
+requirement = "If any scope.constraints entry says this is a regulated/high-stakes deployment, routing.risk_overlays should include high_stakes_regulated."
+verification_method = "manual_inspection"
+evidence_requirement = "A reviewer checks routing.risk_overlays against the stated regulated-deployment constraint."
+failure_behavior = "warn_only"
+source_or_rationale = "Data-science-ml pack spec: 'high-stakes deployment lacks required professional/domain review' completion gate; this rule is the routing-side reminder."
+
+[[rules]]
+id = "ds-assumptions-recorded-not-asserted"
+version = "0.1.0"
+title = "Dataset representativeness, label quality, and deployment-environment assumptions are recorded, not asserted as fact"
+purpose = "Reuse the core separate-facts-from-assumptions invariant with a data-science-specific reminder."
+scope = "Data-science-ml tasks."
+applies_when = true
+severity = "soft_objective"
+requirement = "Any claim about dataset representativeness, label quality, or the deployment environment not backed by status.claim_ledger is recorded in scope.assumptions."
+verification_method = "manual_inspection"
+evidence_requirement = "Cross-check each such claim against scope.assumptions or status.claim_ledger."
+failure_behavior = "downgrade_score"
+source_or_rationale = "Data-science-ml pack spec: data-provenance and governance requirements."

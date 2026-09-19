@@ -14,6 +14,7 @@ from typing import Any
 
 SUPPORTED_CONTRACT_VERSIONS = ("0.1.0", "0.2.0", "0.3.0", "0.4.0")
 SUPPORTED_RULE_PACK_VERSIONS = ("0.1.0",)
+SUPPORTED_DOMAIN_PACK_VERSIONS = ("0.1.0",)
 
 
 class UnsupportedSchemaVersion(ValueError):
@@ -40,6 +41,17 @@ def load_rule_pack_schema(version: str = "0.1.0") -> dict[str, Any]:
             f"(supported: {', '.join(SUPPORTED_RULE_PACK_VERSIONS)})."
         )
     filename = f"rule_pack.v{version.replace('.', '_')}.schema.json"
+    return _read_schema(filename)
+
+
+@cache
+def load_domain_pack_schema(version: str = "0.1.0") -> dict[str, Any]:
+    if version not in SUPPORTED_DOMAIN_PACK_VERSIONS:
+        raise UnsupportedSchemaVersion(
+            f"domain_pack_schema_version {version!r} is not supported by this build "
+            f"(supported: {', '.join(SUPPORTED_DOMAIN_PACK_VERSIONS)})."
+        )
+    filename = f"domain_pack.v{version.replace('.', '_')}.schema.json"
     return _read_schema(filename)
 
 

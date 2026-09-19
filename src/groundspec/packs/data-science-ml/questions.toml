@@ -1,0 +1,71 @@
+# High-value clarification dimensions for data-science/ML requests.
+# Advisory documentation -- see product-management/questions.toml's header
+# for the same disclaimer (the CLI validates structure only).
+domain_pack_schema_version = "0.1.0"
+pack_id = "data-science-ml"
+
+[[questions]]
+id = "decision-supported"
+question = "What decision or user outcome would this model's prediction actually change?"
+why_material = "A model with no attached decision cannot be evaluated for whether its errors matter, or how much."
+classification_guidance = "blocking if the request is purely 'build a model for X' with no stated downstream use."
+
+[[questions]]
+id = "prediction-target"
+question = "What, exactly, is being predicted (the precise label/target definition)?"
+why_material = "A vague target ('predict churn') hides label-definition choices that change the whole modeling problem."
+classification_guidance = "high_value; blocking if the label definition is genuinely ambiguous (e.g. multiple plausible definitions of 'churn')."
+
+[[questions]]
+id = "unit-of-analysis"
+question = "What is one row/example (a user, a session, a transaction, a document)?"
+why_material = "Determines the correct split strategy (see split-strategy-appropriate-to-structure) and what 'overfitting' even means here."
+classification_guidance = "high_value."
+
+[[questions]]
+id = "dataset-source"
+question = "Where does the data come from, and is it already available or does it need to be collected?"
+why_material = "Changes feasibility, licensing/consent obligations, and representativeness."
+classification_guidance = "high_value."
+
+[[questions]]
+id = "label-definition"
+question = "How exactly is the label/ground truth defined and obtained?"
+why_material = "A noisy or inconsistently-defined label caps the achievable performance regardless of model choice."
+classification_guidance = "high_value."
+
+[[questions]]
+id = "deployment-environment"
+question = "Where would this run if deployed (batch job, real-time API, on-device, embedded in another product)?"
+why_material = "Changes latency/resource constraints and which production-readiness evidence is even relevant."
+classification_guidance = "important_defaultable for purely exploratory work; high_value once production is in scope."
+
+[[questions]]
+id = "error-cost-asymmetry"
+question = "Are false positives and false negatives similarly costly, or is one much worse?"
+why_material = "Directly determines whether plain accuracy is an adequate metric or actively misleading (e.g. severe class imbalance)."
+classification_guidance = "high_value whenever the task is a classification/detection task."
+
+[[questions]]
+id = "latency-cost-constraints"
+question = "What latency and compute-cost budget must inference fit within?"
+why_material = "Rules out otherwise-reasonable model choices and changes what 'acceptable' evaluation even means for production."
+classification_guidance = "important_defaultable for exploratory work; high_value once production is in scope."
+
+[[questions]]
+id = "regulated-or-sensitive-use"
+question = "Does this involve regulated (medical/financial/safety) or sensitive-personal-data territory?"
+why_material = "Determines whether high_stakes_regulated/personal_data overlays apply and whether domain review is required before any production claim."
+classification_guidance = "blocking if ambiguous and a production-readiness claim would otherwise be made."
+
+[[questions]]
+id = "evaluation-budget"
+question = "How much time/compute is available for evaluation (a quick baseline check vs. a full benchmark study)?"
+why_material = "Determines whether a rigorous baseline-plus-ablation study is realistic or whether the honest scope is a single sanity-checked exploratory result."
+classification_guidance = "important_defaultable (default to the smallest evaluation that still supports the stated decision)."
+
+[[questions]]
+id = "exploratory-benchmark-or-production"
+question = "Is this exploratory modeling, a benchmark/comparison study, or heading toward a production deployment?"
+why_material = "Directly determines which completion gates in this pack actually apply -- an exploratory task is not held to the same evidence bar as a production-readiness claim."
+classification_guidance = "blocking if ambiguous, since it changes which acceptance criteria and evidence requirements are even appropriate."

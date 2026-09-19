@@ -2,7 +2,7 @@
 
 *A requirements compiler and verification framework for AI agent tasks.*
 
-**Status: pre-release candidate.** The deterministic core, rule engine, three domain packs, CLI, the reusable Meta-Skill, and the Claude Code / Codex / generic adapters are implemented, tested, and passing in cross-platform CI (Ubuntu/Windows/macOS x Python 3.11-3.13; see the [Actions tab](https://github.com/MazenAbbas/groundspec/actions)). PyPI publication and external user validation have not happened yet -- see [Known limitations](#known-limitations--whats-still-pending) below.
+**Status: pre-release candidate.** The deterministic core, rule engine, Domain Pack SDK with five official packs, CLI, the reusable Meta-Skill, and the Claude Code / Codex / generic adapters are implemented, tested, and passing in cross-platform CI (Ubuntu/Windows/macOS x Python 3.11-3.13; see the [Actions tab](https://github.com/MazenAbbas/groundspec/actions)). PyPI publication and external user validation have not happened yet -- see [Known limitations](#known-limitations--whats-still-pending) below.
 
 ## What problem does this solve?
 
@@ -92,7 +92,49 @@ Every contract declares a time budget, a clarification-question budget, planning
 
 ## How are rule packs selected, and how are conflicts resolved?
 
-Rules are layered, in fixed precedence order: **core invariants** (built in, universal) > **risk overlays** (selected by the contract's declared risk overlays: informational, external communication, filesystem mutation, destructive/irreversible, security-sensitive, high-stakes/regulated, personal data) > **domain packs** (software, research, or content -- selected by `routing.domain_packs`) > **project packs** (supplied locally via `--project-pack`). A lower layer never overrides a higher one. Two rules only conflict if they share an explicit `conflict_key` and disagree on their `requirement`; when that happens, the higher-precedence rule wins and the conflict -- winner, loser, and why -- is recorded, never silently dropped. See [`groundspec.rules.precedence`](src/groundspec/rules/precedence.py) and [examples/09-domain-rule-vs-style-preference](examples/09-domain-rule-vs-style-preference/) for a live instance of this resolving.
+Rules are layered, in fixed precedence order: **core invariants** (built in, universal) > **risk overlays** (selected by the contract's declared risk overlays: informational, external communication, filesystem mutation, destructive/irreversible, security-sensitive, high-stakes/regulated, personal data) > **domain packs** (software, research, content, product-management, or data-science-ml -- selected by `routing.domain_packs`) > **project packs** (supplied locally via `--project-pack`). A lower layer never overrides a higher one. Two rules only conflict if they share an explicit `conflict_key` and disagree on their `requirement`; when that happens, the higher-precedence rule wins and the conflict -- winner, loser, and why -- is recorded, never silently dropped. See [`groundspec.rules.precedence`](src/groundspec/rules/precedence.py) and [examples/09-domain-rule-vs-style-preference](examples/09-domain-rule-vs-style-preference/) for a live instance of this resolving.
+
+## The Domain Pack SDK (`v0.3.0rc1`)
+
+A Domain Pack is declarative policy and guidance -- never executable code -- that lets Groundspec support an additional profession without bloating the Meta-Skill or duplicating rules. Five official packs ship: `software`, `research`, `content` (unchanged from earlier releases, now wrapped in the new manifest format with zero content duplication), plus two new ones this release, `product-management` and `data-science-ml`.
+
+```bash
+groundspec pack list                                   # every discovered pack, official/project/user
+groundspec pack inspect product-management               # full manifest, rules, gates, questions
+groundspec pack resolve --pack software --pack data-science-ml   # deterministic composition check
+groundspec pack lock --pack software --pack data-science-ml      # reproducible groundspec.lock
+groundspec pack test data-science-ml                       # run a pack's own declarative fixtures
+groundspec pack init my-domain --output .groundspec/packs    # scaffold a new, project-local pack
+```
+
+`groundspec pack resolve` is the deterministic step in the target architecture -- the Meta-Skill may propose which pack(s) fit a request (inherently model-dependent, like all natural-language routing in this project), but only the resolver validates availability, versions, dependencies, conflicts, and precedence before a Task Contract is built. An unofficial (project- or user-local) pack can never silently shadow an official one with the same ID. Full guide: [docs/pack-authoring-guide.md](docs/pack-authoring-guide.md). Migration notes for existing projects (nothing breaks): [docs/migration-guide-v0.3.md](docs/migration-guide-v0.3.md). Deferred packs and why medical/legal/investment-advice domains aren't ordinary packs: [docs/domain-pack-backlog.md](docs/domain-pack-backlog.md).
+
+### Worked example: `/groundspec Design and validate a customer-churn prediction project for a subscription service`
+
+This is real output from an independent forward test (see [docs/forward-tests-v0.3.0rc1.md](docs/forward-tests-v0.3.0rc1.md), Scenario 1), not a hypothetical -- an isolated agent ran this request end to end through the actual CLI, and every claim below was independently re-verified afterward by re-running `groundspec validate`/`pack resolve`/`evaluate` against its real, produced files.
+
+1. **Proposed packs:** `data-science-ml` + `research` -- the exact pairing this project's own routing guidance names for this request. Validated before anything was built:
+   ```
+   $ groundspec pack resolve --pack data-science-ml --pack research
+   Resolved 2 pack(s) for: data-science-ml, research
+     - data-science-ml v0.1.0 [official, requested]
+         rules: ds-prediction-target-distinct-from-modeling-approach, ds-scope-states-non-goals, ...
+     - research v0.1.0 [official, requested]
+         rules: explicit-research-question, primary-over-secondary-sources, recency-checked, ...
+   [OK] composition is valid
+   ```
+2. **Clarification:** zero blocking questions -- six materially outcome-changing items (the downstream decision the model supports, the churn-label definition, dataset source, error-cost asymmetry, regulated-use status, exploratory-vs-production framing) were each recorded as a `high_value` open question with `resolution_status = "defaulted"` and a disclosed rationale, not silently assumed.
+3. **Generated contract and deliverable:** `routing.domain_packs` = `[data-science-ml, research]`; the actual experiment-design document specifies a **time-based, customer-grouped split** (never a plain random split, since customer-months are both time-ordered and repeated-entity data), two baselines, and PR-AUC/recall-at-fixed-precision as the metric -- explicitly not accuracy, with the reasoning stated.
+4. **Evidence and completion gates:** no real dataset exists for this task, so `ds_dataset_provenance_unknown = true` was set honestly rather than defaulted to `false`; the work is exploratory and discloses its own gaps, so `ds_exploratory_missing_experiments_disclosed = true` as well. Every domain claim is labeled `MODEL-EVALUATED`/`ASSUMPTION`/`RESEARCH_NEEDED` -- nothing is asserted as `VERIFIED` about the (nonexistent) dataset.
+5. **Final status:**
+   ```
+   $ groundspec evaluate churn-prediction-experiment-design.toml evaluation/
+   Verdict: insufficient_evidence
+   Completion state: INCOMPLETE
+     [data-science-ml:dataset-provenance-unknown] ... (downgrade_to_incomplete)
+     [data-science-ml:exploratory-work-honestly-scoped] ... (downgrade_to_caveats)
+   ```
+   `INCOMPLETE`, not `PASS`, because two gates fired at different severities and the mechanism correctly took the worse of the two -- an honest result for a design document with no real dataset behind it yet, not a defect in the design itself.
 
 ## Clarification algorithm
 
@@ -152,9 +194,11 @@ groundspec compile launch-post.toml --target claude-code   # or --target codex /
 
 `groundspec validate contract.toml` runs strict schema validation (unknown keys rejected, no type coercion). `groundspec audit contract.toml` additionally resolves the applicable rule packs, reports precedence conflicts, checks budget/verification-reserve sanity, and lists every applicable hard constraint labeled as either mechanically checkable now or requiring human/model judgment -- it never claims to have verified something it can't observe.
 
-## Authoring a rule pack
+## Authoring a rule pack, or a full Domain Pack
 
-A rule pack is one JSON or TOML file validated against [`rule_pack.v0_1_0.schema.json`](src/groundspec/schema/rule_pack.v0_1_0.schema.json): a stable ID, a layer (`project` for anything you author locally), and a list of rules, each with an ID, purpose, scope, a small closed `applies_when` condition, severity, requirement, verification method, evidence requirement, and failure behavior. No code execution is possible anywhere in this format. Full guide: [docs/rule-pack-authoring.md](docs/rule-pack-authoring.md). Validate one with `groundspec pack validate path/to/pack.json`.
+A rule pack is one JSON or TOML file validated against [`rule_pack.v0_1_0.schema.json`](src/groundspec/schema/rule_pack.v0_1_0.schema.json): a stable ID, a layer (`project` for anything you author locally), and a list of rules, each with an ID, purpose, scope, a small closed `applies_when` condition, severity, requirement, verification method, evidence requirement, and failure behavior. No code execution is possible anywhere in this format. Full guide: [docs/rule-pack-authoring.md](docs/rule-pack-authoring.md). Validate one with `groundspec pack validate path/to/pack.toml`.
+
+A full **Domain Pack** wraps a rules file in a versioned manifest (`pack.toml`) that adds capabilities, dependencies, conflicts, clarification questions, evidence policies, acceptance-criterion templates, and completion gates -- see [The Domain Pack SDK](#the-domain-pack-sdk-v030rc1) above and [docs/pack-authoring-guide.md](docs/pack-authoring-guide.md). Scaffold one with `groundspec pack init <pack-id> --output .groundspec/packs`.
 
 ## How is my data handled?
 
@@ -170,7 +214,7 @@ The rule content itself (which requirements belong in each domain pack, and thei
 
 ## Product boundaries
 
-Groundspec does not: make an incapable model capable; guarantee factual correctness or task success; replace domain expertise or required professional review; eliminate hallucinations; infer missing authorization; verify actions it cannot observe; make a malicious tool safe; turn a subjective preference into objective truth; support every profession (three domain packs ship: software, research, content); execute any remote action without approval; or offer a hosted service or third-party rule-pack marketplace. The Meta-Skill specifically does not guarantee it asks the objectively right questions, that its mode/intent detection is always correct, or that its judgment about whether evidence satisfies a criterion is reliable -- it structures and records that judgment so it can be checked, it doesn't replace the checking.
+Groundspec does not: make an incapable model capable; guarantee factual correctness or task success; replace domain expertise or required professional review; eliminate hallucinations; infer missing authorization; verify actions it cannot observe; make a malicious tool safe; turn a subjective preference into objective truth; support every profession (five official domain packs ship: software, research, content, product-management, data-science-ml -- see [docs/domain-pack-backlog.md](docs/domain-pack-backlog.md) for what's deferred and why medical/legal/investment-advice domains are deliberately not ordinary packs); execute any remote action without approval; or offer a hosted service or third-party pack marketplace. The Meta-Skill specifically does not guarantee it asks the objectively right questions, that its mode/intent detection is always correct, or that its judgment about whether evidence satisfies a criterion is reliable -- it structures and records that judgment so it can be checked, it doesn't replace the checking.
 
 ## Current evaluation status
 
@@ -189,7 +233,8 @@ None of the above is invented; where a result doesn't exist yet, it's labeled `P
 - **The 30-scenario evaluation corpus ([eval/scenarios/scenarios.json](eval/scenarios/scenarios.json)) and its metrics ([eval/metrics.py](eval/metrics.py)) are built and unit-tested, but the 3-arm baseline comparison itself has not been run against a live model** -- seven scenarios are already mechanically checked against this repository's own deterministic tests (see each scenario's `verified_by` field); the rest are marked `requires_model_run` and PENDING. See [docs/evaluation-methodology.md](docs/evaluation-methodology.md).
 - **The Meta-Skill has thirteen genuine live-run evaluations and two constructed examples**, not a full evaluation suite -- see [Current evaluation status](#current-evaluation-status).
 - **External user validation (non-technical users, students, a PM, a developer, a researcher, a marketer) has not happened.** See [docs/user-validation-protocol.md](docs/user-validation-protocol.md) for the planned protocol.
-- **Only three domain packs exist** (software, research, content); no medical/legal/financial packs are shipped, by design (see Product boundaries).
+- **Only five official domain packs exist** (software, research, content, product-management, data-science-ml); no medical/legal/financial packs are shipped, by design (see Product boundaries and [docs/domain-pack-backlog.md](docs/domain-pack-backlog.md)).
+- **`groundspec.lock` is a reproducibility record, not yet an enforcement mechanism** -- there is no lock-verification command in this release that fails when a pack selection no longer matches a checked-in lock file (see [docs/threat-model.md](docs/threat-model.md)'s "Lock-file tampering and enforcement" entry).
 - **The rule pack format supports a single file only** (no directories or archives), which sidesteps zip-slip/path-traversal risk in archive extraction entirely rather than solving it -- see [docs/threat-model.md](docs/threat-model.md).
 - **The Meta-Skill's export safety checks a symlink at the destination and its immediate parent, not the full ancestor chain** -- see [docs/threat-model.md](docs/threat-model.md).
 
@@ -197,7 +242,10 @@ None of the above is invented; where a result doesn't exist yet, it's labeled `P
 
 - [docs/architecture.md](docs/architecture.md) -- system design and the deterministic/model-dependent boundary
 - [docs/schema-reference.md](docs/schema-reference.md) -- every Task Contract field
-- [docs/rule-pack-authoring.md](docs/rule-pack-authoring.md) -- writing your own rule packs
+- [docs/rule-pack-authoring.md](docs/rule-pack-authoring.md) -- writing a single-file rule pack (pre-SDK format, still fully supported)
+- [docs/pack-authoring-guide.md](docs/pack-authoring-guide.md) -- the Domain Pack SDK: manifest, discovery, resolution, locking, completion gates
+- [docs/migration-guide-v0.3.md](docs/migration-guide-v0.3.md) -- what changed in `v0.3.0rc1` (nothing breaks)
+- [docs/domain-pack-backlog.md](docs/domain-pack-backlog.md) -- deferred packs, and why medical/legal/investment-advice domains aren't ordinary packs
 - [docs/adapter-guide.md](docs/adapter-guide.md) -- how the Claude/Codex/generic adapters work
 - [docs/threat-model.md](docs/threat-model.md) -- assets, attackers, mitigations, remaining risk
 - [docs/evaluation-methodology.md](docs/evaluation-methodology.md) -- metrics, scenarios, and what's pending

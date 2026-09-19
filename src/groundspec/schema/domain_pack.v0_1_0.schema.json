@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:groundspec:schema:domain-pack:0.1.0",
+  "title": "Domain Pack manifest",
+  "description": "Declarative manifest for a Domain Pack (pack.toml). A Domain Pack is policy and guidance data, never executable code -- see docs/pack-authoring-guide.md and docs/threat-model.md's pack-extensibility section. Referenced content files (rules.toml, questions.toml, etc.) are separate documents validated in their own right; this schema only validates the manifest itself.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["domain_pack_schema_version", "pack_id", "version", "display_name", "description", "compatibility"],
+  "properties": {
+    "domain_pack_schema_version": { "const": "0.1.0" },
+    "pack_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.-]{1,63}$",
+      "description": "Stable identifier used in routing.domain_packs[].pack_id, CLI --domain flags, and lock files."
+    },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "display_name": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "One or two sentences. Not a place for the full domain guidance -- that belongs in references/."
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+      "default": [],
+      "maxItems": 30,
+      "uniqueItems": true,
+      "description": "Short capability labels (e.g. 'prd-authoring', 'classification-modeling') shown by `pack list`/`pack inspect`. Advisory only -- never mechanically matched against a request."
+    },
+    "supported_intents": {
+      "type": "array",
+      "items": { "enum": ["contract-only", "plan-and-execute", "audit-existing"] },
+      "default": [],
+      "uniqueItems": true,
+      "description": "Which Meta-Skill task intents this pack is meant for. Empty means no restriction is declared."
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "triggers": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 300 },
+          "default": [],
+          "maxItems": 40,
+          "description": "Example natural-language phrases/keywords that suggest this pack. Advisory documentation for the Meta-Skill's model-dependent routing -- never evaluated deterministically by the CLI. See docs/architecture.md's deterministic/model-dependent boundary."
+        },
+        "exclusions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 300 },
+          "default": [],
+          "maxItems": 40,
+          "description": "Negative routing signals: request shapes this pack does NOT fit even though it might look related. Equally advisory."
+        }
+      },
+      "default": {}
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min_platform_version"],
+      "properties": {
+        "min_platform_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "max_platform_version": {
+          "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" }],
+          "default": null,
+          "description": "Inclusive upper bound on groundspec.__about__.PACK_PLATFORM_VERSION, the Domain Pack SDK's own compatibility contract version (decoupled from the CLI's own possibly-prerelease version string). null means no known upper bound."
+        }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/pack_dependency" },
+      "default": [],
+      "maxItems": 20,
+      "description": "Other Domain Packs this one requires to be resolved alongside it."
+    },
+    "suggested": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{1,63}$" },
+      "default": [],
+      "maxItems": 20,
+      "uniqueItems": true,
+      "description": "Pack IDs commonly useful alongside this one. Informational only -- never auto-resolved."
+    },
+    "conflicts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/pack_conflict" },
+      "default": [],
+      "maxItems": 20,
+      "description": "Packs this one declares itself incompatible with. A conflicting pair can never both be in one resolved selection -- see docs/architecture.md's composition/precedence section."
+    },
+    "priority": {
+      "type": "integer",
+      "minimum": -1000,
+      "maximum": 1000,
+      "default": 0,
+      "description": "Tie-break dimension (higher wins) used before alphabetical pack_id ordering when two same-layer packs' rules/gates share a conflict key. Does not grant a pack permission to override a higher precedence layer (core invariants, risk overlays, explicit user authorization) -- see docs/architecture.md."
+    },
+    "risk_classification": {
+      "enum": ["standard", "requires_expert_review"],
+      "default": "standard",
+      "description": "'requires_expert_review' documents that a domain (medical, legal, investment-advice) needs additional expert review and safety process beyond what an ordinary pack provides -- see docs/domain-pack-backlog.md. No such pack ships in this release; the CLI does not yet gate on this value beyond surfacing it, which is disclosed, not hidden."
+    },
+    "provides": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rules": {
+          "oneOf": [{ "type": "null" }, { "type": "string", "minLength": 1, "maxLength": 200 }],
+          "default": null,
+          "description": "Relative path to a rule-pack file (rule_pack_schema_version 0.1.0 -- the same format core-invariants.json etc. already use). May itself be a pure-import wrapper with no rules of its own."
+        },
+        "questions": {
+          "oneOf": [{ "type": "null" }, { "type": "string", "minLength": 1, "maxLength": 200 }],
+          "default": null
+        },
+        "evidence_policy": {
+          "oneOf": [{ "type": "null" }, { "type": "string", "minLength": 1, "maxLength": 200 }],
+          "default": null
+        },
+        "acceptance_templates": {
+          "oneOf": [{ "type": "null" }, { "type": "string", "minLength": 1, "maxLength": 200 }],
+          "default": null
+        },
+        "completion_gates": {
+          "oneOf": [{ "type": "null" }, { "type": "string", "minLength": 1, "maxLength": 200 }],
+          "default": null
+        },
+        "references": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "default": [],
+          "maxItems": 20
+        },
+        "tests": {
+          "oneOf": [{ "type": "null" }, { "type": "string", "minLength": 1, "maxLength": 200 }],
+          "default": null
+        }
+      },
+      "default": {}
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string", "maxLength": 1000, "default": "" },
+        "license": { "type": "string", "maxLength": 200, "default": "" },
+        "maintainer": { "type": "string", "maxLength": 200, "default": "" }
+      },
+      "default": {}
+    }
+  },
+  "$defs": {
+    "pack_dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pack_id", "min_version"],
+      "properties": {
+        "pack_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{1,63}$" },
+        "min_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "max_version": {
+          "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" }],
+          "default": null
+        }
+      }
+    },
+    "pack_conflict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pack_id", "reason"],
+      "properties": {
+        "pack_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{1,63}$" },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "min_version": {
+          "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" }],
+          "default": null
+        },
+        "max_version": {
+          "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" }],
+          "default": null
+        }
+      }
+    }
+  }
+}

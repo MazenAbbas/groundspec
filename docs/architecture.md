@@ -42,7 +42,7 @@ Every box above is pure Python, offline, and has no model dependency. There is n
 | 1. Explicit authorization | `routing.authorization` (granted permissions, boundaries, confirm-before list) | Schema + `core-invariants:respect-authorization` rule |
 | 2. Core invariants | Universal rules (preserve intent, separate fact from assumption, no unperformed-work claims, ...) | `src/groundspec/packs/core-invariants.json`, layer `core` |
 | 3. Risk overlays | 7 built-in packs, selected by `routing.risk_overlays` | `src/groundspec/packs/risk_overlays/*.json`, layer `risk_overlay` |
-| 4. Domain packs | software / research / content | `src/groundspec/packs/{software,research,content}/*.json`, layer `domain` |
+| 4. Domain packs | software / research / content / product-management / data-science-ml | `src/groundspec/packs/<pack-id>/`, layer `domain` -- see "Domain Pack SDK" below |
 | 5. Project rules | Anything supplied via `--project-pack` | Loaded as layer `project` |
 | 6. Task preferences | Ad hoc, per-task choices (tone, format) | Represented as `quality.soft_objectives[].source: "user_override"`, not a rule-pack layer -- see "Why task preferences aren't a fifth rule-pack layer" below |
 
@@ -51,6 +51,88 @@ Every box above is pure Python, offline, and has no model dependency. There is n
 ### Why task preferences aren't a fifth rule-pack layer
 
 The PRD's Phase 7 lists five rule layers including "task preferences" (tone, format, style). Modeling free-form style preferences as full rules -- with a stable ID, a verification method, an evidence requirement, a failure behavior -- overstates what they are: a soft objective with a specific source, not a gate. v0.1 represents them as `quality.soft_objectives[].source: "user_override"` directly on the contract instead of inventing a fake rule layer for them. This is a deliberate, documented scope decision, not an oversight; it can be revisited if practice shows real value in giving task preferences their own conflict-detection machinery.
+
+## Domain Pack SDK (v0.3.0rc1)
+
+The target architecture this SDK implements:
+
+```
+Natural-language request
+        |
+Groundspec Meta-Skill            -- intent, mode, clarification, proposed pack selection (model-dependent)
+        v
+Deterministic Pack Resolver      -- availability, versions, dependencies, conflicts, precedence
+        v
+Task Contract                    -- goal, scope, permissions, budget, evidence, acceptance criteria
+        v
+Core invariants + domain packs + risk overlays
+        v
+Execution and evidence collection
+        v
+Deterministic validation and completion gates
+        v
+PASS / PASS_WITH_CAVEATS / INCOMPLETE / BLOCKED / FAIL
+```
+
+**The Meta-Skill may recommend and explain a pack selection; only the deterministic CLI (`groundspec pack resolve`) validates it.** This mirrors the exact same deterministic/model-dependent split documented below for everything else in this project -- see "The deterministic / model-dependent boundary."
+
+### Why a Domain Pack SDK, not more Meta-Skill prose
+
+Before this release, adding a new profession meant writing a single-file rule pack (still fully supported, see `docs/rule-pack-authoring.md`) and hand-editing Meta-Skill reference files to describe it. That doesn't scale, and it gives a new domain no way to declare its own dependencies, conflicts, version compatibility, or completion behavior beyond what a bare rules file's `applies_when` conditions can express. The SDK (`groundspec.packs.sdk`) adds a manifest format and a discovery/resolution/locking layer **on top of** the existing rule-pack engine, which is otherwise unmodified -- see `docs/pack-authoring-guide.md` for the authoring-facing guide and `docs/migration-guide-v0.3.md` for exactly how the three pre-existing packs were brought under it with zero content duplication (a `pack.toml` wrapper whose `provides.rules` points at the unchanged, pre-existing rule file).
+
+### Canonical structure and manifest
+
+```
+packs/<pack-id>/
+├── pack.toml                    # manifest, validated against domain_pack.v0_1_0.schema.json
+├── <pack-id>.toml                 # rules (rule_pack_schema_version 0.1.0, unchanged format)
+├── questions.toml                  # optional: clarification dimensions
+├── evidence-policy.toml             # optional: evidence-labeling policies
+├── acceptance-templates.toml         # optional: reusable acceptance-criterion templates
+├── completion-gates.toml              # optional: the one deterministic behavioral extension point
+├── references/domain-guidance.md       # optional: human/model-facing guidance
+└── tests/scenarios.toml                 # optional: deterministic fixtures for `pack test`
+```
+
+Every file under a pack directory is individually optional except `pack.toml` itself -- `docs/pack-authoring-guide.md` has the full field reference.
+
+### Discovery and trust (no remote marketplace)
+
+Three origins, checked in this order: **official** (shipped with `groundspec`, discovered by scanning `src/groundspec/packs/` for any immediate subdirectory containing a `pack.toml`), **project** (`.groundspec/packs/<pack-id>/`), **user** (`~/.groundspec/packs/<pack-id>/`, only if present). No automatic download, no remote registry, no scanning of arbitrary parent directories. An unofficial pack declaring the same `pack_id` as an official one is never silently substituted -- see `docs/threat-model.md`'s Domain Pack extensibility section for the full security posture.
+
+### Composition, precedence, and conflicts
+
+`groundspec pack resolve --pack <id> [--pack <id> ...]` computes the dependency closure for an *explicitly requested* set of pack IDs (never inferred from natural language by the CLI itself), checks version ranges, and classifies every conflict as `resolvable_by_precedence` (a shadow, or two packs' completion gates disagreeing but broken by declared `priority` -- reported, not blocking), `requires_user_decision` (a genuinely ambiguous same-priority gate disagreement), or an outright invalid composition (an explicit `conflicts` declaration, a cross-pack duplicate rule ID, an impossible/unsatisfied version range, or a dependency cycle). The existing core/risk-overlay/domain/project rule-*layer* precedence (the table above) is completely unchanged by any of this -- a pack's `priority` field only ever breaks a tie between two packs' *completion gates*, never between rules across layers.
+
+### The one deterministic behavioral extension point: completion gates
+
+A pack cannot change how `groundspec.metaskill.completion.derive_completion_state` computes the core completion state -- that function is untouched. Instead, `groundspec.packs.sdk.gates.apply_pack_gates` takes the core result and a pack's *triggered* gates (conditions evaluated against `{"contract": ..., "evidence": ...}` through the same safe DSL rules already use) and only ever **downgrades** it (`PASS` -> `PASS_WITH_CAVEATS`/`INCOMPLETE`/`FAIL`, never the reverse) -- the same "a lower layer can narrow but never broaden" rule that governs pack-provided rules generally. `product-management` and `data-science-ml` both use this to implement the completion-gate requirements from their own specs (a silently-defaulted material decision, an unresolved leakage risk, a production claim resting on one offline score, and so on) without either pack needing a single line of Python.
+
+### Lock files
+
+`groundspec pack lock` writes a canonical-JSON `groundspec.lock` (exact pack IDs, versions, SHA-256 content hashes computed fresh from disk, origins, dependency closure) using the same canonical-JSON writer that already guarantees Task Contract determinism (`groundspec.contract.serialization.canonical_json_dumps`) -- no timestamps, no absolute host paths, byte-identical output for byte-identical inputs. It is currently a **reproducibility record**, not yet an enforcement mechanism (there is no lock-verification command in this release) -- see `docs/threat-model.md`'s "Lock-file tampering and enforcement" entry.
+
+### Performance (measured, single-machine, not a universal benchmark)
+
+Measured once, on one Windows development machine, against a clean dev-tree install with all 5 official packs present (20 repeats per number, median reported; see `tests/integration/test_pack_sdk_official_packs.py::test_full_composition_resolves_quickly` for the regression guard this informs). **These are not portable performance guarantees** -- they exist to establish "responsive on an ordinary student laptop, no GPU required" in concrete terms, not to promise a specific number on every machine.
+
+| Operation | Median time |
+|---|---|
+| `discover_official()` | ~1.4 ms |
+| `discover_all()` (official + project + user) | ~1.5 ms |
+| `load_pack()` for one pack, including the full safety scan | 65-95 ms |
+| `resolve()` for 1 requested pack | ~385 ms |
+| `resolve()` for all 5 official packs | ~385 ms |
+
+Peak traced memory (`tracemalloc`) for a full 5-pack `resolve()`: under 250 KiB -- negligible, and not meaningfully different from a 1-pack resolve, since Python's own interpreter/import overhead dominates whatever this SDK allocates.
+
+**A real, honestly-disclosed characteristic, not a bug:** `resolve()`'s time is essentially flat regardless of how many packs are *requested*, because `_load_all_candidates` (`groundspec/packs/sdk/resolver.py`) loads and safety-scans **every pack discoverable from every origin** up front, not just the requested subset -- this is what makes official-pack shadow detection work even for a pack the caller never explicitly asked about. The consequence: `resolve()`'s cost scales with the total number of packs *installed and discoverable*, not with the size of the request. At 5 official packs this is still sub-half-second and well within "responsive," but it would not scale gracefully to a project with hundreds of local packs without changing `_load_all_candidates` to lazily load only requested-pack-plus-dependency-closure candidates and fall back to a full scan only for the shadow-detection warning path. Filed as a known limitation rather than fixed in this release, since this version ships no marketplace and no mechanism for a project to accumulate hundreds of packs.
+
+Installed package footprint: wheel 196 KiB, sdist 280 KiB, installed `site-packages/groundspec/` 1.1 MiB -- consistent with the "no pandas/NumPy/scikit-learn/PyTorch/TensorFlow/Jupyter" constraint on `data-science-ml`; the SDK and both new official packs add no new third-party dependency beyond what `groundspec` already required (`jsonschema`, `tomli`/`tomli-w`).
+
+### What this SDK does not do
+
+No remote pack marketplace, no automatic download or update, no medical/legal/investment-advice packs (see `docs/domain-pack-backlog.md` for what those would actually require), no gating on the manifest's own `risk_classification` field beyond surfacing it. All disclosed, not hidden.
 
 ## The deterministic / model-dependent boundary
 

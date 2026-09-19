@@ -1,0 +1,79 @@
+# High-value clarification dimensions for product-management requests.
+# Advisory documentation consumed by the Meta-Skill's clarification policy
+# (references/clarification-policy.md) -- the CLI validates this file's
+# structure but never evaluates "is this question material" itself; that
+# judgment is inherently model-dependent (see docs/architecture.md).
+domain_pack_schema_version = "0.1.0"
+pack_id = "product-management"
+
+[[questions]]
+id = "problem-vs-solution"
+question = "Is this describing a problem to explore, or a specific solution already decided?"
+why_material = "Changes whether the deliverable is an open discovery document or a scoped build plan -- conflating the two produces a PRD that reads as decided when it is actually exploratory, or vice versa."
+classification_guidance = "Usually high_value; treat as blocking if the rest of the request depends entirely on this (e.g. 'write acceptance criteria' cannot proceed without knowing what is being accepted)."
+
+[[questions]]
+id = "target-user"
+question = "Who, specifically, is this for -- not just a broad category?"
+why_material = "A persona sketch this vague cannot ground acceptance criteria or evidence about the actual segment's needs."
+classification_guidance = "high_value; a safe default exists only if the request already names a specific, narrow segment."
+
+[[questions]]
+id = "geography"
+question = "Which specific market/city/region/country is this for?"
+why_material = "Changes market size, applicable regulation, competitive landscape, and language -- see clarification-policy.md's 'illustrative anchor is not a decision' section."
+classification_guidance = "high_value; never silently resolve to a real place used only as an illustrative example."
+
+[[questions]]
+id = "product-type"
+question = "What kind of product is this (app, feature, internal tool, physical product, service)?"
+why_material = "Changes which acceptance-template dimensions and which risk overlays even apply."
+classification_guidance = "high_value unless already unambiguous from the request."
+
+[[questions]]
+id = "business-model"
+question = "Standalone product, or an integration/partnership with an existing platform or institution?"
+why_material = "Changes the competitive framing, go-to-market, and regulatory posture entirely."
+classification_guidance = "high_value."
+
+[[questions]]
+id = "monetization"
+question = "How does this make money, and how do users pay (if at all)?"
+why_material = "Changes financial-feasibility claims and which acceptance criteria are even checkable."
+classification_guidance = "high_value; a safe default exists only for a purely internal, non-commercial tool."
+
+[[questions]]
+id = "launch-scope"
+question = "Pilot/limited launch, or full launch -- and what exactly is in v1 versus later?"
+why_material = "Directly determines scope.non_goals and which success metrics are even measurable at this stage."
+classification_guidance = "high_value."
+
+[[questions]]
+id = "stakeholder"
+question = "Who is the actual audience/decision-maker for this document (founder, exec, engineering team, investor)?"
+why_material = "Changes the right level of detail, evidence rigor, and which risks matter most to surface first."
+classification_guidance = "important_defaultable in most cases (default to 'the requester') unless the request implies a specific formal audience (e.g. 'for the board')."
+
+[[questions]]
+id = "regulated-context"
+question = "Does this touch medical, legal, financial, or safety-consequential territory?"
+why_material = "Determines whether routing.risk_overlays must include high_stakes_regulated and whether regulatory claims need primary-source evidence."
+classification_guidance = "blocking if ambiguous and the deliverable would otherwise make regulatory claims without appropriate overlay/evidence handling."
+
+[[questions]]
+id = "success-horizon"
+question = "Over what time horizon should success be measured (days, a quarter, a year)?"
+why_material = "A metric with no time horizon is not actually measurable."
+classification_guidance = "important_defaultable (default to a horizon consistent with the stated launch scope) unless the request names conflicting horizons."
+
+[[questions]]
+id = "research-authorization"
+question = "Is external/network research authorized for this task, or must everything be reasoned from what's already given?"
+why_material = "Determines which evidence labels are even honestly available (RESEARCH_NEEDED vs. SOURCE_VERIFIED) -- see execution-and-verification.md's Authorization section."
+classification_guidance = "blocking if the request is silent and any claim would materially benefit from external verification."
+
+[[questions]]
+id = "document-vs-implementation-authorization"
+question = "Is this request for the PRD document only, or does it also authorize starting implementation?"
+why_material = "Changes routing.authorization.granted_permissions and which risk overlays (filesystem_mutation, destructive_irreversible) actually apply."
+classification_guidance = "blocking if ambiguous and any implementation-adjacent action would otherwise be taken without it."

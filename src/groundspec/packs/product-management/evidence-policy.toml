@@ -1,0 +1,44 @@
+# Evidence-labeling policies specific to product-management claims. These
+# document how to apply the existing claim_ledger evidence-label taxonomy
+# (schema 0.4.0, see execution-and-verification.md) to PM-specific claim
+# shapes -- they do not define new labels. The CLI validates this file's
+# structure; applying it correctly to a specific claim is a model/human
+# judgment call, not something `groundspec validate` can check.
+domain_pack_schema_version = "0.1.0"
+pack_id = "product-management"
+
+[[policies]]
+id = "market-size-vs-segment-evidence"
+description = "A total-addressable-market figure and a target-segment demand figure are different claims and must not share one claim_ledger entry."
+applies_to_claim_categories = ["market_size", "problem_definition"]
+guidance = "Record the market-wide figure and the segment-specific figure as two separate status.claim_ledger entries, each with its own scope_and_qualifiers stating exactly what population it describes. Never let a market-wide statistic's evidence_label imply it also supports a segment-specific claim."
+
+[[policies]]
+id = "persona-researched-or-assumed"
+description = "A persona description is either backed by real research (interviews, survey data) or is explicitly an assumption -- never presented as if observed."
+applies_to_claim_categories = ["problem_definition", "product_scope"]
+guidance = "If the persona was not built from real user data, label it ASSUMPTION in status.claim_ledger (or scope.assumptions if non-material) and say so in the deliverable text, not just the contract."
+
+[[policies]]
+id = "threshold-sourced-or-model-evaluated"
+description = "A product threshold (conversion rate, retention target, sample size) is either a sourced external benchmark or a model-suggested starting point -- never presented ambiguously."
+applies_to_claim_categories = ["acceptance_thresholds"]
+guidance = "Use PRIMARY_SOURCE_VERIFIED/SECONDARY_SOURCE_SUPPORTED only if a real external benchmark was actually opened and read; otherwise MODEL_EVALUATED, and say so inline in the deliverable at first use of the number."
+
+[[policies]]
+id = "incumbent-advantage-identified"
+description = "A competitive-landscape claim states whether an incumbent has structural advantages the new product would need to overcome, not just that competitors exist."
+applies_to_claim_categories = ["market_size", "go_no_go_recommendation"]
+guidance = "Distinguish 'competitors exist' (weak, often obvious) from 'competitors have an advantage this product must overcome' (the actually decision-relevant claim) -- label the latter's evidence honestly per whether it was researched or reasoned."
+
+[[policies]]
+id = "regulatory-conditional-claims-preserved"
+description = "A legal/regulatory claim preserves the source's actual conditions -- see execution-and-verification.md's worked ZATCA VAT example."
+applies_to_claim_categories = ["legal_or_regulatory_feasibility"]
+guidance = "Never generalize a conditional regulatory rule into a universal one. scope_and_qualifiers must restate the actual conditions, exceptions, and jurisdiction limits."
+
+[[policies]]
+id = "risk-ranked-by-impact-and-uncertainty"
+description = "Assumptions and risks are ranked, not just listed -- a flat list hides which one actually threatens the plan's validity."
+applies_to_claim_categories = ["risk_severity"]
+guidance = "Order status.residual_risks so the highest-impact, highest-uncertainty item is legible first, and map each to a validation method in the deliverable's risk register, not just in the contract."
