@@ -1,4 +1,4 @@
-__version__ = "0.3.0rc1"
+__version__ = "0.3.0rc2"
 CONTRACT_SCHEMA_VERSION = "0.4.0"
 RULE_PACK_SCHEMA_VERSION = "0.1.0"
 DOMAIN_PACK_SCHEMA_VERSION = "0.1.0"
