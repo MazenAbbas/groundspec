@@ -18,6 +18,8 @@ def new_contract(
     expected_deliverables: list[dict[str, str]],
     risk_overlays: list[str] | None = None,
     risk_level: str = "low",
+    tool_call_budget: int = 50,
+    time_budget_minutes: int = 60,
 ) -> dict[str, object]:
     return {
         "contract_schema_version": CONTRACT_SCHEMA_VERSION,
@@ -53,11 +55,11 @@ def new_contract(
         },
         "acceptance": {"criteria": []},
         "budget": {
-            "time_budget_minutes": 60,
+            "time_budget_minutes": time_budget_minutes,
             "max_clarification_questions": 3,
             "max_planning_iterations": 3,
             "max_execution_iterations": 20,
-            "tool_call_budget": 50,
+            "tool_call_budget": tool_call_budget,
             "research_depth": "shallow",
             "cost_budget": None,
             "reserved_verification_fraction": 0.15,

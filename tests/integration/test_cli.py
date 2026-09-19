@@ -176,3 +176,41 @@ def test_repeatable_flags_document_themselves_in_help(capsys):
     # Regression: --domain/--risk-overlay silently accepted repeats without
     # documenting it, unlike --user/--deliverable -- caught by forward testing.
     assert help_text.count("Repeatable") >= 4
+
+
+def test_create_records_user_stated_budget_limits(tmp_path):
+    import tomllib
+
+    out = tmp_path / "limited.toml"
+    rc = main(
+        [
+            "create", "--task-id", "limited-task", "--brief", "b", "--goal", "g", "--user", "u",
+            "--deliverable", "d:desc", "--tool-call-budget", "6", "--time-budget-minutes", "20",
+            "--out", str(out),
+        ]
+    )
+    assert rc == 0
+    budget = tomllib.loads(out.read_text(encoding="utf-8"))["budget"]
+    assert budget["tool_call_budget"] == 6
+    assert budget["time_budget_minutes"] == 20
+    assert main(["validate", str(out)]) == 0
+
+
+def test_create_defaults_budget_when_flags_absent(tmp_path):
+    import tomllib
+
+    out = tmp_path / "default.toml"
+    main(["create", "--task-id", "default-task", "--brief", "b", "--goal", "g", "--user", "u",
+          "--deliverable", "d:desc", "--out", str(out)])
+    budget = tomllib.loads(out.read_text(encoding="utf-8"))["budget"]
+    assert budget["tool_call_budget"] == 50
+    assert budget["time_budget_minutes"] == 60
+
+
+def test_create_rejects_non_positive_budget(tmp_path, capsys):
+    out = tmp_path / "bad.toml"
+    rc = main(["create", "--task-id", "bad-task", "--brief", "b", "--goal", "g", "--user", "u",
+               "--deliverable", "d:desc", "--tool-call-budget", "0", "--out", str(out)])
+    assert rc == 2
+    assert not out.exists()
+    assert "--tool-call-budget must be a positive integer" in capsys.readouterr().err

@@ -34,6 +34,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--risk-overlay", action="append", choices=sorted(RISK_OVERLAY_PACK_IDS), help="Repeatable."
     )
     p_create.add_argument("--risk-level", choices=["low", "medium", "high", "critical"])
+    p_create.add_argument(
+        "--tool-call-budget",
+        type=int,
+        help="Tool-call limit to record in the contract (default 50). Use when the user states a limit.",
+    )
+    p_create.add_argument(
+        "--time-budget-minutes",
+        type=int,
+        help="Time limit in minutes to record in the contract (default 60).",
+    )
     p_create.add_argument("--domain", action="append", choices=sorted(DOMAIN_PACK_IDS), help="Repeatable.")
     p_create.add_argument("--out")
     p_create.set_defaults(func=commands.cmd_create)
