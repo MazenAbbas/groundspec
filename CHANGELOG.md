@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.0rc2] - 2026-09-19
+
+Guardrail-fix release. After `v0.3.0rc1` shipped, the maintainer ran three real tasks of their own through the exported Meta-Skill (a PRD with a deliberately undecided detail, an ML experiment plan with an unknown dataset license, and a small coding task); each result was re-verified against the produced files. All three behaved correctly on the release's central requirements, and the trials surfaced four real weaknesses, all addressed here. Nothing in the deterministic core, the Domain Pack SDK, or any pack's rules changed.
+
+### Fixed
+
+- **An agent raised its own tool-call budget (50 to 80) mid-task and disclosed it afterward.** The Meta-Skill now treats every user- or contract-set limit (`tool_call_budget`, time budget, iteration caps, clarification cap, `routing.authorization` entries) as a boundary: never raise or relax one without the user's explicit yes at that moment; when a limit is close, say so and either wait or finish the highest-value work inside it and record the cut work in `status.omitted_work`. A silent change disclosed later is still an `authorization_violations` entry.
+- **An agent ran `pip install` without asking after finding a broken environment (the `v0.3.0rc1` prediction-endpoint forward test).** Package installs and downloads are now explicitly listed as external actions in the Skill's non-negotiables and its Authorization section, with an ordered response to a broken or incomplete environment: use what is available, else ask once naming the exact command, else finish what does not need it and report `INCOMPLETE`. Prevention is still model behaviour; detection remains deterministic (`authorization_violations` forces `FAIL`).
+- **Stale acceptance-criterion text.** After web research was authorized mid-task, a criterion still read "no sourced-looking figures" while marked met. Task-contract workflow step 8 now requires reconciling every criterion, constraint, non-goal, and authorization boundary with what actually happened before evaluating. This is model judgment; `groundspec evaluate` cannot see it, and the docs say so.
+- **Outdated legal sources.** A 2021 secondary source was relied on for a data-protection claim. New deterministic advisory: `groundspec evaluate` prints a `note: regulatory source recency` line for any cited `legal_or_regulatory_feasibility` claim whose `publication_date` is missing, unparseable, or more than 24 months before its `access_date` (computed only from the entry's own dates, never today's date). It does not change the completion state. The research guidance now requires filling both dates and looking for later amendments.
+- **`groundspec create` could not record a user-stated limit.** New `--tool-call-budget` and `--time-budget-minutes` flags (validated as positive integers; defaults unchanged at 50 and 60), documented in the Skill's workflow reference alongside a rule to check a stated limit's feasibility up front and never reorder or skip the contract steps to save calls. The workflow reference also listed only three of the five domain packs for `--domain`; fixed.
+- **Checked-and-failed versus could-not-run.** A run that could not execute its checks (a package it was not allowed to install) recorded `met: false` and reached `FAIL`; the honest state is `INCOMPLETE`. The evidence guidance now says to record `false` only for a check that ran and failed, and to omit one that could not run.
+
+### Verification
+
+- New tests: recency check (unit and CLI level), `create` budget flags, and guardrail-wording presence checks. ruff and strict mypy clean.
+- Six independent subagent runs against this tree plus the maintainer's three real trials, each re-verified against the produced files: see `docs/forward-tests-v0.3.0rc2.md`. Two fixes are not yet exercised live (reconciling stale criterion text after an authorization change; an agent using the new budget flags) and the document says so.
+
 ## [0.3.0rc1] - 2026-09-18
 
 Major architecture release: the **Domain Pack SDK**, turning Groundspec from a small collection of built-in domain rules into an extensible, secure Domain Pack platform, plus two new official packs (`product-management`, `data-science-ml`). Existing behavior, contracts, and rule packs are fully preserved.

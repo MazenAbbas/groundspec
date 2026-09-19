@@ -27,6 +27,7 @@ from groundspec.metaskill.completion import (
     derive_completion_state,
     evaluate_acceptance_criteria,
     has_deferred_high_value_open_questions,
+    regulatory_source_recency_warnings,
     residual_risk_blocks_completion,
 )
 from groundspec.metaskill.export import (
@@ -100,6 +101,11 @@ def cmd_init(args: object) -> int:
     return 0
 
 
+def _budget_arg(args: object, name: str, default: int) -> int:
+    value = getattr(args, name, None)
+    return default if value is None else int(value)
+
+
 def cmd_create(args: object) -> int:
     task_id = getattr(args, "task_id", None) or input("Short task id (e.g. write-launch-post): ").strip()
     brief_text = getattr(args, "brief", None) or input("What do you want done, in your own words: ").strip()
@@ -127,6 +133,14 @@ def cmd_create(args: object) -> int:
             print(f"{FAIL} unknown risk overlay {overlay!r}. Valid: {valid}", file=sys.stderr)
             return 2
 
+    for flag, value in (
+        ("--tool-call-budget", getattr(args, "tool_call_budget", None)),
+        ("--time-budget-minutes", getattr(args, "time_budget_minutes", None)),
+    ):
+        if value is not None and value < 1:
+            print(f"{FAIL} {flag} must be a positive integer, got {value}", file=sys.stderr)
+            return 2
+
     contract = new_contract(
         task_id=task_id,
         raw_user_brief=brief_text,
@@ -136,6 +150,8 @@ def cmd_create(args: object) -> int:
         expected_deliverables=deliverables,
         risk_overlays=risk_overlays,
         risk_level=getattr(args, "risk_level", None) or "low",
+        tool_call_budget=_budget_arg(args, "tool_call_budget", 50),
+        time_budget_minutes=_budget_arg(args, "time_budget_minutes", 60),
     )
 
     routing = contract["routing"]
@@ -405,6 +421,8 @@ def cmd_evaluate(args: object) -> int:
         if disclosed_material_limitations:
             print("  note: at least one material claim in status.claim_ledger rests on disclosed "
                   "secondary support, model judgment, an assumption, or a bounded research gap")
+        for warning in regulatory_source_recency_warnings(claim_ledger):
+            print(f"  note: regulatory source recency -- {warning}")
         if unmapped_material_claims:
             print(f"{FAIL} material claim(s) with no status.claim_ledger entry: "
                   f"{'; '.join(unmapped_material_claims)}")

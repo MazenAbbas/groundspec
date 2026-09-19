@@ -179,6 +179,59 @@ def claim_ledger_has_disclosed_material_limitations(claim_ledger: list[dict[str,
     )
 
 
+STALE_REGULATORY_SOURCE_MONTHS = 24
+_CITED_LABELS: frozenset[str] = frozenset({"PRIMARY_SOURCE_VERIFIED", "SECONDARY_SOURCE_SUPPORTED"})
+
+
+def _parse_year_month(value: object) -> tuple[int, int] | None:
+    """Parse ``YYYY``, ``YYYY-MM`` or ``YYYY-MM-DD`` into (year, month); anything else is None."""
+    if not isinstance(value, str):
+        return None
+    parts = value.strip().split("-")
+    if not 1 <= len(parts) <= 3 or not all(p.isdigit() for p in parts):
+        return None
+    if len(parts[0]) != 4 or any(len(p) != 2 for p in parts[1:]):
+        return None
+    year = int(parts[0])
+    month = int(parts[1]) if len(parts) > 1 else 1
+    if not 1 <= month <= 12:
+        return None
+    return year, month
+
+
+def regulatory_source_recency_warnings(claim_ledger: list[dict[str, object]]) -> list[str]:
+    """Advisory notes for cited ``legal_or_regulatory_feasibility`` claims whose
+    source may be out of date. Deterministic: it compares only the two dates
+    recorded on the entry (``publication_date`` vs ``access_date``), never
+    today's date, so the same contract always yields the same notes. A note
+    prompts a human or the executor to look for later amendments; it does not
+    change the completion state."""
+    warnings: list[str] = []
+    for claim in claim_ledger:
+        affects = claim.get("affects")
+        if not isinstance(affects, list) or "legal_or_regulatory_feasibility" not in affects:
+            continue
+        if claim.get("evidence_label") not in _CITED_LABELS:
+            continue
+        claim_id = str(claim.get("claim_id", "?"))
+        published = _parse_year_month(claim.get("publication_date"))
+        accessed = _parse_year_month(claim.get("access_date"))
+        if published is None or accessed is None:
+            warnings.append(
+                f"{claim_id}: publication_date or access_date is missing or unparseable, "
+                "so the source's recency cannot be assessed"
+            )
+            continue
+        age_months = (accessed[0] - published[0]) * 12 + (accessed[1] - published[1])
+        if age_months > STALE_REGULATORY_SOURCE_MONTHS:
+            warnings.append(
+                f"{claim_id}: source published {claim.get('publication_date')} but accessed "
+                f"{claim.get('access_date')} (~{age_months} months apart, limit "
+                f"{STALE_REGULATORY_SOURCE_MONTHS}); check for later amendments or implementing regulations"
+            )
+    return warnings
+
+
 def derive_completion_state(
     *,
     hard_constraints_passed: bool,

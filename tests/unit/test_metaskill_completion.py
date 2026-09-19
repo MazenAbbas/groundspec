@@ -5,6 +5,7 @@ from groundspec.metaskill.completion import (
     derive_completion_state,
     evaluate_acceptance_criteria,
     has_deferred_high_value_open_questions,
+    regulatory_source_recency_warnings,
     residual_risk_blocks_completion,
 )
 
@@ -436,3 +437,63 @@ def test_unmapped_material_claims_does_not_escalate_past_fail_or_blocked():
         has_unmapped_material_claims=True,
     )
     assert state_blocked == "BLOCKED"
+
+
+def _reg_claim(**overrides):
+    claim = {
+        "claim_id": "vat-rule",
+        "evidence_label": "SECONDARY_SOURCE_SUPPORTED",
+        "affects": ["legal_or_regulatory_feasibility"],
+        "publication_date": "2025-06",
+        "access_date": "2026-09-19",
+    }
+    claim.update(overrides)
+    return claim
+
+
+def test_recency_recent_regulatory_source_has_no_warning():
+    assert regulatory_source_recency_warnings([_reg_claim()]) == []
+
+
+def test_recency_old_regulatory_source_warns():
+    warnings = regulatory_source_recency_warnings([_reg_claim(publication_date="2021-09-01")])
+    assert len(warnings) == 1
+    assert warnings[0].startswith("vat-rule:")
+    assert "amendments" in warnings[0]
+
+
+def test_recency_boundary_exactly_24_months_does_not_warn_but_25_does():
+    ok = regulatory_source_recency_warnings(
+        [_reg_claim(publication_date="2024-09", access_date="2026-09")]
+    )
+    stale = regulatory_source_recency_warnings(
+        [_reg_claim(publication_date="2024-08", access_date="2026-09")]
+    )
+    assert ok == []
+    assert len(stale) == 1
+
+
+def test_recency_missing_or_unparseable_dates_warn_instead_of_passing_silently():
+    for bad in ("", "sometime in 2021", "2021-13", "21-05", None):
+        warnings = regulatory_source_recency_warnings([_reg_claim(publication_date=bad)])
+        assert len(warnings) == 1, bad
+        assert "cannot be assessed" in warnings[0]
+
+
+def test_recency_ignores_non_regulatory_or_uncited_claims():
+    claims = [
+        _reg_claim(affects=["market_size"], publication_date="2010"),
+        _reg_claim(evidence_label="MODEL_EVALUATED", publication_date="2010"),
+        _reg_claim(affects=[], publication_date="2010"),
+    ]
+    assert regulatory_source_recency_warnings(claims) == []
+
+
+def test_recency_is_deterministic_and_does_not_depend_on_todays_date():
+    claim = _reg_claim(publication_date="2015", access_date="2016")
+    assert regulatory_source_recency_warnings([claim]) == []
+    assert regulatory_source_recency_warnings([claim]) == regulatory_source_recency_warnings([claim])
+
+
+def test_recency_publication_after_access_date_is_not_flagged():
+    assert regulatory_source_recency_warnings([_reg_claim(publication_date="2027-01")]) == []
